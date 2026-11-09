@@ -1,0 +1,14 @@
+{
+  "method": "smtp",
+  "enabled": true,
+  "to": ["you@example.com"],
+  "from": "行星日报 <digest@example.com>",
+  "subject": "行星日报 · {date}",
+  "smtp": {
+    "host": "smtp.example.com",
+    "port": 465,
+    "username": "digest@example.com",
+    "password": "在这里填授权码或密码",
+    "ssl": true
+  }
+}

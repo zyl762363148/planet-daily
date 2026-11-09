@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>行星日报 · Windows 版</title>
+<style>
+:root{
+  --canvas:#101214; --paper:#1B1D1F; --sidebar:#15191C; --ink:#EDF0EE;
+  --secondary:#B0B8B9; --muted:#A5AFB0; --accent:#E89A83; --rule:#383D40;
+  --navy:#214F63; --whiteInk:#F5F3EB; --line:rgba(255,255,255,.10);
+  --hair:rgba(255,255,255,.07); --sheen:rgba(255,255,255,.055);
+  --shadow:0 3px 9px rgba(0,0,0,.30); --shadowHover:0 12px 26px rgba(0,0,0,.42);
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:var(--canvas);color:var(--ink);
+  font-family:"PingFang SC","Microsoft YaHei","微软雅黑","Segoe UI",sans-serif;
+  font-size:14px;-webkit-font-smoothing:antialiased;overflow:hidden;
+}
+a{color:inherit;text-decoration:none}
+button,select,input{font-family:inherit}
+.app{display:flex;height:100vh}
+
+/* ── 侧栏 ── */
+.sidebar{
+  width:236px;flex:none;background:var(--sidebar);border-right:1px solid var(--rule);
+  display:flex;flex-direction:column;overflow-y:auto;padding:0 12px 18px;
+}
+.sidebar::-webkit-scrollbar,.main::-webkit-scrollbar{width:8px}
+.sidebar::-webkit-scrollbar-thumb,.main::-webkit-scrollbar-thumb{background:var(--hair);border-radius:8px}
+.brand{display:flex;align-items:center;gap:11px;padding:24px 6px 16px}
+.brand-mark{
+  width:38px;height:38px;flex:none;border-radius:12px;background:var(--paper);
+  border:1px solid var(--line);display:grid;place-items:center;font-size:19px;
+  box-shadow:var(--shadow);
+}
+.brand h1{margin:0;font-size:16.5px;font-weight:700;letter-spacing:1.5px}
+.brand p{margin:4px 0 0;font-size:10.5px;color:var(--muted);letter-spacing:1px}
+.side-card{
+  display:flex;align-items:center;gap:10px;padding:11px;margin-bottom:10px;
+  background:var(--paper);border:1px solid var(--line);border-radius:13px;
+  box-shadow:var(--shadow);cursor:pointer;transition:transform .18s,border-color .18s;
+}
+.side-card:hover{transform:translateY(-1.5px);border-color:var(--accent)}
+.side-icon{
+  width:30px;height:30px;flex:none;border-radius:9px;display:grid;place-items:center;
+  background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent);font-size:15px;
+}
+.side-card b{display:block;font-size:12.5px;font-weight:600}
+.side-card small{display:block;margin-top:3px;font-size:10.5px;color:var(--muted)}
+.side-card .chev{margin-left:auto;color:var(--muted);font-size:12px}
+.side-row{display:flex;align-items:center;gap:8px;margin:0 2px 14px}
+.side-row label{font-size:10.5px;color:var(--muted);flex:none}
+select{
+  flex:1;min-width:0;padding:7px 9px;border-radius:9px;border:1px solid var(--line);
+  background:var(--paper);color:var(--secondary);font-size:11.5px;outline:none;cursor:pointer;
+}
+.mode-btn{
+  flex:none;padding:7px 10px;border-radius:9px;border:1px solid var(--line);
+  background:var(--paper);color:var(--secondary);font-size:11.5px;cursor:pointer;
+}
+.side-divider{height:1px;background:var(--rule);margin:2px 6px 12px;opacity:.7}
+.group{font-size:10.5px;font-weight:600;letter-spacing:1.4px;color:var(--secondary);margin:16px 0 7px 12px}
+.nav{
+  display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:9px;
+  color:var(--secondary);cursor:pointer;font-size:12.5px;transition:background .15s,color .15s;
+}
+.nav:hover{background:var(--hair);color:var(--ink)}
+.nav.active{background:var(--paper);color:var(--ink);font-weight:600;box-shadow:var(--shadow)}
+.nav .dot{width:6px;height:6px;border-radius:50%;flex:none}
+.nav .go{margin-left:auto;font-size:11px;opacity:.55}
+.side-foot{margin-top:auto;padding:14px 8px 0;font-size:10.5px;color:var(--muted);line-height:1.8}
+
+/* ── 主区 ── */
+.main{flex:1;overflow-y:auto;position:relative}
+.main::before{
+  content:"";position:fixed;top:0;right:0;width:900px;height:700px;pointer-events:none;
+  background:radial-gradient(ellipse at top right,color-mix(in srgb,var(--accent) 8%,transparent),transparent 70%);
+}
+.wrap{max-width:1000px;margin:0 auto;padding:30px 38px 70px;position:relative}
+.masthead .row1{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.date{font-size:29px;font-weight:700;letter-spacing:.5px}
+.week{font-size:13.5px;font-weight:600;color:var(--secondary)}
+.city{font-size:12px;color:var(--secondary)}
+.top-actions{margin-left:auto;display:flex;gap:8px;align-items:center}
+.pill{
+  display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:9px;
+  background:var(--hair);border:1px solid var(--line);color:var(--secondary);
+  font-size:11.5px;cursor:pointer;transition:all .15s;
+}
+.pill:hover{color:var(--ink);background:var(--sheen)}
+.search{
+  width:190px;padding:7px 11px;border-radius:9px;border:1px solid var(--line);
+  background:var(--paper);color:var(--ink);font-size:11.5px;outline:none;
+}
+.search::placeholder{color:var(--muted)}
+.meta{font-size:11px;color:var(--muted);margin-top:11px}
+.mast-rule{margin-top:15px;border-top:2px solid var(--ink);border-bottom:1px solid var(--rule);height:5px;opacity:.85}
+.lead{display:flex;gap:12px;margin-top:18px}
+.lead-bar{width:3px;height:38px;border-radius:3px;background:var(--accent);flex:none;margin-top:3px}
+.lead-kicker{font-size:10.5px;font-weight:600;letter-spacing:.9px;color:var(--accent);margin-bottom:7px}
+.lead-text{font-size:17.5px;font-weight:500;line-height:1.55;margin:0}
+
+.radio{
+  margin-top:26px;padding:20px 22px;border-radius:17px;background:var(--navy);color:var(--whiteInk);
+  box-shadow:0 10px 24px rgba(0,0,0,.24);position:relative;overflow:hidden;
+}
+.radio::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:linear-gradient(135deg,rgba(255,255,255,.11),rgba(255,255,255,.02) 45%,transparent);
+}
+.radio-top{display:flex;align-items:center;gap:14px;position:relative}
+.play{
+  width:52px;height:52px;flex:none;border-radius:50%;border:none;cursor:pointer;
+  background:var(--accent);color:#fff;font-size:18px;display:grid;place-items:center;
+  box-shadow:0 4px 14px color-mix(in srgb,var(--accent) 40%,transparent);
+}
+.play:disabled{opacity:.5;cursor:default}
+.radio-title{font-size:16.5px;font-weight:600}
+.radio-sub{font-size:11.5px;opacity:.75;margin-top:5px}
+.radio-progress{height:4px;border-radius:4px;background:rgba(255,255,255,.20);margin:16px 0 12px;overflow:hidden;position:relative}
+.radio-progress i{display:block;height:100%;width:0;background:var(--whiteInk);border-radius:4px;transition:width .3s}
+.chapters{display:flex;gap:6px;flex-wrap:wrap;position:relative}
+.chapter{
+  font-size:10.5px;padding:5px 9px;border-radius:20px;cursor:pointer;
+  background:rgba(255,255,255,.10);color:var(--whiteInk);border:none;
+}
+.chapter:hover,.chapter.on{background:rgba(255,255,255,.24)}
+
+.section{margin-top:30px}
+.section-head{display:flex;align-items:baseline;gap:9px;margin-bottom:10px}
+.section-head .bar{width:3px;height:14px;border-radius:3px;background:var(--ink);align-self:center}
+.section-head h2{margin:0;font-size:12.5px;font-weight:600;letter-spacing:1.3px}
+.section-head .meta-r{margin-left:auto;font-size:11px;color:var(--muted)}
+.section-head .link{font-size:11px;color:var(--secondary);cursor:pointer}
+.section-rule{height:1px;margin-bottom:16px;background:linear-gradient(90deg,color-mix(in srgb,var(--ink) 30%,transparent),transparent)}
+.chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px}
+.chip{
+  display:inline-flex;align-items:center;gap:7px;padding:7px 12px;border-radius:20px;
+  background:var(--paper);border:1px solid var(--line);font-size:11.5px;color:var(--secondary);cursor:pointer;
+}
+.chip:hover{color:var(--ink);border-color:var(--accent)}
+.chip i{width:5px;height:5px;border-radius:50%;display:block}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.tile{
+  padding:18px;border-radius:16px;background:var(--paper);border:1px solid var(--line);
+  box-shadow:var(--shadow);cursor:pointer;transition:transform .18s,box-shadow .18s,border-color .18s;
+  position:relative;overflow:hidden;
+}
+.tile::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,var(--sheen),transparent 60%);pointer-events:none}
+.tile:hover{transform:translateY(-2px);box-shadow:var(--shadowHover);border-color:var(--hair)}
+.tile-head{display:flex;align-items:center;gap:12px;position:relative}
+.tile-mark{
+  width:38px;height:38px;flex:none;border-radius:11px;display:grid;place-items:center;
+  font-size:15px;font-weight:700;
+}
+.tile-name{font-size:14.5px;font-weight:600;line-height:1.2}
+.tile-group{font-size:11px;color:var(--muted);margin-top:4px}
+.count{
+  margin-left:auto;font-size:10.5px;font-weight:600;padding:5px 9px;border-radius:20px;
+  white-space:nowrap;
+}
+.tile-rule{height:1px;background:linear-gradient(90deg,var(--hair),transparent);margin:14px 0}
+.tile-line{display:flex;gap:10px;align-items:baseline;font-size:12.5px;line-height:1.5;margin-bottom:8px}
+.tile-line .no{font-size:10px;font-family:Consolas,monospace;flex:none;opacity:.8}
+.tile-line span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.more{
+  display:block;margin:16px auto 0;padding:8px 14px;border-radius:20px;
+  background:var(--paper);border:1px solid var(--line);color:var(--secondary);font-size:11.5px;cursor:pointer;
+}
+
+.card{
+  padding:20px;border-radius:16px;background:var(--paper);border:1px solid var(--line);box-shadow:var(--shadow);
+  position:relative;overflow:hidden;
+}
+.card::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,var(--sheen),transparent 60%);pointer-events:none}
+.brief-point{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--hair);position:relative}
+.brief-point:last-child{border-bottom:none}
+.brief-no{font-size:11px;font-family:Consolas,monospace;color:var(--accent);flex:none;margin-top:3px}
+.brief-point b{font-size:13px;font-weight:600;display:block;line-height:1.55}
+.brief-point p{margin:5px 0 0;font-size:11.5px;color:var(--muted);line-height:1.6}
+.hot-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.hot-col{position:relative}
+.hot-col h3{margin:0 0 10px;font-size:12px;font-weight:600}
+.hot-item{font-size:11.5px;color:var(--secondary);padding:6px 0;border-bottom:1px solid var(--hair);line-height:1.5}
+.hot-item:last-child{border-bottom:none}
+
+.back{
+  display:inline-flex;align-items:center;gap:6px;margin-bottom:18px;padding:7px 12px;border-radius:9px;
+  background:var(--hair);border:1px solid var(--line);color:var(--secondary);font-size:11.5px;cursor:pointer;
+}
+.entry{padding:16px 0;border-bottom:1px solid var(--hair);position:relative}
+.entry:last-child{border-bottom:none}
+.entry h3{margin:0;font-size:15px;font-weight:600;line-height:1.5}
+.entry .src{font-size:11px;color:var(--muted);margin-top:7px}
+.entry p{margin:9px 0 0;font-size:12.5px;color:var(--secondary);line-height:1.75}
+.entry .open{display:inline-block;margin-top:10px;font-size:11.5px;color:var(--accent)}
+.empty{padding:36px;text-align:center;color:var(--muted);font-size:12.5px}
+.foot-note{margin-top:34px;font-size:10.5px;color:var(--muted);text-align:center;line-height:1.9}
+@media(max-width:900px){
+  .sidebar{width:200px}.wrap{padding:24px 22px 60px}.grid{grid-template-columns:1fr}
+  .hot-grid{grid-template-columns:1fr}.date{font-size:24px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">◉</div>
+      <div><h1>行星日报</h1><p>每天一册 · 读懂今天</p></div>
+    </div>
+    <div class="side-card" data-action="overview">
+      <div class="side-icon">⚙</div>
+      <div><b>今日速览</b><small>栏目 · 播报 · 皮肤</small></div>
+      <span class="chev">›</span>
+    </div>
+    <div class="side-row">
+      <select id="skinSelect" title="切换皮肤"></select>
+      <button class="mode-btn" id="modeBtn" title="切换明暗">◐</button>
+    </div>
+    <div class="side-divider"></div>
+    <div id="navGroups"></div>
+    <div class="side-foot" id="sideFoot"></div>
+  </aside>
+  <main class="main"><div class="wrap" id="content"></div></main>
+</div>
+<audio id="briefAudio" preload="metadata" src="audio/brief.mp3"></audio>
+
+<script type="application/json" id="digest-data">{"date": "2026-11-04", "generated_at": "2026-11-04T20:07:45+08:00", "topic": {"title": "今日专题：claude-code 的相关线索", "summary": "今天有 2 条内容都提到「claude-code」。下面把相关事实和判断放在一起，方便快速建立上下文。", "points": ["开源：逆向工程被代理自动化后，软件保护多了一条直接干扰 AI 推理链的防线。", "开源：Rust 的工程规范正被封装成可调用的代理技能，代码质量约束开始随模型与 IDE 一起分发。"], "tags": ["claude-code"], "item_ids": ["e8bb9b5c5c77cf7d", "5a88eac68d321c13"]}, "brief": {"headline": "过去 24 小时全球科技、政经与产业核心动态全景梳理", "summary": "以下是今日重点与值得跟进的线索。", "deep_stories": [{"id": "story-1", "tag": "环球通讯社 · 24h 焦点", "title": "尹锡悦违反选举法案二审亦获刑 或致当选无效", "lead": "中新网11月4日电 据韩联社当地时间4日报道，韩国前总统尹锡悦违反《公职选举法》案二审当日宣判，尹锡悦被判有期徒刑1年6个月，缓刑3年。", "global_perspective": "多国信源交叉比对，剥离单一立场情绪，提取地缘与宏观硬事实。", "domestic_perspective": "信源来自 中新网国际，建议结合国内外同类报道交叉核对关键数据与落地影响。", "impact": "聚焦「尹锡悦违反选举法案二审亦获刑 或致当选无效」背后的行业趋势与关键信号。", "sources": ["中新网国际"], "url": "https://www.chinanews.com.cn/gj/2026/11-04/10726191.shtml", "category_id": "wire", "item_id": "07010bc8b4d21a12"}, {"id": "story-2", "tag": "环球通讯社 · 24h 焦点", "title": "以色列中央选举委员会：议会选举不存在舞弊行为", "lead": "中新社北京11月4日电 耶路撒冷消息：当地时间11月4日，以色列中央选举委员会表示，该国日前举行的议会选举中不存在舞弊行为，选举的公正性也未受到损害。", "global_perspective": "多国信源交叉比对，剥离单一立场情绪，提取地缘与宏观硬事实。", "domestic_perspective": "信源来自 中新网国际，建议结合国内外同类报道交叉核对关键数据与落地影响。", "impact": "聚焦「以色列中央选举委员会：议会选举不存在舞弊行为」背后的行业趋势与关键信号。", "sources": ["中新网国际"], "url": "https://www.chinanews.com.cn/gj/2026/11-04/10726163.shtml", "category_id": "wire", "item_id": "8263fe5bdecffdfb"}, {"id": "story-3", "tag": "环球通讯社 · 24h 焦点", "title": "美國民主黨歷史性勝利 深入共和黨票倉攻城掠地", "lead": "兩场一年前还被认为将勢均力敵的美國参议院选举，最終都成为民主黨輕鬆取勝的选戰。", "global_perspective": "多国信源交叉比对，剥离单一立场情绪，提取地缘与宏观硬事实。", "domestic_perspective": "信源来自 英国广播公司，建议结合国内外同类报道交叉核对关键数据与落地影响。", "impact": "聚焦「美國民主黨歷史性勝利 深入共和黨票倉攻城掠地」背后的行业趋势与关键信号。", "sources": ["英国广播公司"], "url": "https://www.bbc.com/zhongwen/articles/c6kgq8l48q2po/trad?at_medium=RSS&at_campaign=rss", "category_id": "wire", "item_id": "eb9efab823875fd6"}, {"id": "story-4", "tag": "环球通讯社 · 24h 焦点", "title": "2026年美國中期选举结果实时更新", "lead": "美國國会由众议院和参议院組成。众议院全部435个议席都会改选，众议员任期固定为兩年。与此同时，参议院100个议席中，有35席亦会进行改选。参议员任期为六年。", "global_perspective": "多国信源交叉比对，剥离单一立场情绪，提取地缘与宏观硬事实。", "domestic_perspective": "信源来自 英国广播公司，建议结合国内外同类报道交叉核对关键数据与落地影响。", "impact": "聚焦「2026年美國中期选举结果实时更新」背后的行业趋势与关键信号。", "sources": ["英国广播公司"], "url": "https://www.bbc.com/zhongwen/articles/c5rmyrm0n8k8o/trad?at_medium=RSS&at_campaign=rss", "category_id": "wire", "item_id": "dfb9ebc63a3ef36e"}, {"id": "story-5", "tag": "环球通讯社 · 24h 焦点", "title": "回应“介选”说 国台办指民进党当局无中生有、掩盖施政无能", "lead": "中新社北京11月4日电 (记者 李百加 徐雪莹)对于民进党当局宣称要慎防大陆“介入选举”，国务院台办发言人朱凤莲4日在北京指出，这种说法完全是无中生有、颠倒黑白；目的是掩盖其施政无能，挑起敌视大陆情绪以骗取选票。", "global_perspective": "多国信源交叉比对，剥离单一立场情绪，提取地缘与宏观硬事实。", "domestic_perspective": "信源来自 中新网国内，建议结合国内外同类报道交叉核对关键数据与落地影响。", "impact": "聚焦「回应“介选”说 国台办指民进党当局无中生有、掩盖施政无能」背后的行业趋势与关键信号。", "sources": ["中新网国内"], "url": "https://www.chinanews.com.cn/gn/2026/11-04/10726048.shtml", "category_id": "wire", "item_id": "f3c271d60b11faac"}], "points": [{"category": "环球通讯社", "category_id": "wire", "item_id": "07010bc8b4d21a12", "text": "尹锡悦违反选举法案二审亦获刑 或致当选无效——中新网11月4日电 据韩联社当地时间4日报道，韩国前总统尹锡悦违反《公职选举法》案二审当日宣判，尹锡悦被判有期徒刑1年6个月，缓刑3年。"}, {"category": "环球通讯社", "category_id": "wire", "item_id": "8263fe5bdecffdfb", "text": "以色列中央选举委员会：议会选举不存在舞弊行为——中新社北京11月4日电 耶路撒冷消息：当地时间11月4日，以色列中央选举委员会表示，该国日前举行的议会选举中不存在舞弊行为，选举的公正性也未受到损害。"}, {"category": "人工智能", "category_id": "ai", "item_id": "68d6e2cfb53f89d3", "text": "不靠堆砌数据，让机器人看懂真实物理世界 | 招商局狮子山实验室发布「驭物™ Lion-ER-35B-A3B」具身推理模型——仅激活3B参数，十项基准全线提升！"}, {"category": "人工智能", "category_id": "ai", "item_id": "fa8cdcff922673ee", "text": "Anthropic 为重要开源项目新增可选安全扫描服务——点击查看原文\u003e"}, {"category": "信息差", "category_id": "infogap", "item_id": "01011f31d75d3c92", "text": "Nexus Mods 公布 AI 生成内容政策——最大 PC 游戏 Mod 分享托管平台 Nexus Mods 公布了 AI 生成内容政策。Nexus Mods 没有禁止 AI 生成 Mod，但对此类 Mod 的分享设定了更严格的规定。新…"}, {"category": "信息差", "category_id": "infogap", "item_id": "f8755e7c1f1478c4", "text": "首个：华为云智果 AgentArts 获中国信通院最高等级评级——华为官方今日宣布，华为云智果 AgentArts 智能体平台近日顺利通过中国信通院组织的可信 AI 企业级智能体平台评估， 是首个通过该项测评，并获得当前最高等级（4+ 级）的产品 。 据…"}, {"category": "财经观察", "category_id": "economy", "item_id": "df385087a5d7aaca", "text": "中非绿色合作何以行稳致远？业界专家把脉非洲能源项目融资难题——中新网岳阳11月4日电 (张雪盈)“非洲拥有极其丰富的水电、风电、光伏、天然气资源，但普遍存在投资周期长、前期投入大、跨境风险复杂、融资渠道有限等痛点，破解难题的核心在于依托政策性金融的定…"}, {"category": "财经观察", "category_id": "economy", "item_id": "2bbab29a4bc6fcc6", "text": "（投资中国）全球矿业巨头力拓“看见”中企出海新模式——中新社北京11月4日电 (记者 庞无忌)一家拥有150多年历史的全球矿业巨头，正从中国看到新的可能。过去，中国对于力拓而言是重要的矿产品市场。如今，这家矿业巨头开始将中国企业的设计、制造、…"}, {"category": "政策解读", "category_id": "policy", "item_id": "a3d277b340993d3c", "text": "中国人民银行加力实施股票回购增持再贷款政策——中国人民银行加力实施股票回购增持再贷款政策（来源：中国人民银行官方公开政策发布）。"}, {"category": "政策解读", "category_id": "policy", "item_id": "9aabc14764a1a43f", "text": "养老服务消费补贴惠及243万失能老年人——养老服务消费补贴惠及243万失能老年人（来源：新华网官方公开政策发布）。"}], "opportunities": [], "audio_script": "【01 开场】\n你好，这里是行星日报。今天是11月4日，星期三。杭州富阳今天有阵雨或雷雨，20点00分气温约17度，今天最低16度，最高18摄氏度。\n\n【02 今日重点】\n先看今天的重点。第一条，尹锡悦违反选举法案二审亦获刑或致当选无效。第二条，以色列中央选举委员会：议会选举不存在舞弊行为。第三条，不靠堆砌数据，让机器人看懂真实物理世界 | 招商局狮子山实验室发布驭物™ 艾勒艾欧艾娜-伊阿尔-35比-诶3比具身推理模型。第四条，安索匹克为重要开源项目新增可选安全扫描服务。第五条，中非绿色合作何以行稳致远？业界专家把脉非洲能源项目融资难题。第六条，全球矿业巨头力拓看见中企出海新模式。部分条目尚未完成中文整理，暂不播报。\n\n【03 热点背景】\n接下来是今天的重点新闻，给刚才的消息多补一层背景。先看第一条。尹锡悦违反选举法案二审亦获刑或致当选无效。具体来说，中新网11月4日电据韩联社当地时间4日报道，韩国前总统尹锡悦违反公职选举法案二审当日宣判，尹锡悦被判有期徒刑1年6个月，缓刑3年。再看第二条。以色列中央选举委员会：议会选举不存在舞弊行为。这背后，中新社北京11月4日电耶路撒冷消息：当地时间11月4日，以色列中央选举委员会表示，该国日前举行的议会选举中不存在舞弊行为，选举的公正性也未受到损害。第三条，美國民主黨歷史性勝利深入共和黨票倉攻城掠地。报道提到，兩场一年前还被认为将勢均力敵的美國参议院选举，最終都成为民主黨輕鬆取勝的选戰。第四条，2026年美國中期选举结果实时更新。这里的背景是，美國國会由众议院和参议院組成。众议院全部435个议席都会改选，众议员任期固定为兩年。与此同时，参议院100个议席中，有35席亦会进行改选。参议员任期为六年。最后是第五条。回应介选说国台办指民进党当局无中生有、掩盖施政无能。同时，中新社北京11月4日电对于民进党当局宣称要慎防大陆介入选举，国务院台办发言人朱凤莲4日在北京指出，这种说法完全是无中生有、颠倒黑白；目的是掩盖其施政无能，挑起敌视大陆情绪以骗取选票。\n\n【04 环球通讯社】\n接下来看环球通讯社。尹锡悦违反选举法案二审亦获刑或致当选无效。中新网11月4日电据韩联社当地时间4日报道，韩国前总统尹锡悦违反公职选举法案二审当日宣判，尹锡悦被判有期徒刑1年6个月，缓刑3年。以色列中央选举委员会：议会选举不存在舞弊行为。中新社北京11月4日电耶路撒冷消息：当地时间11月4日，以色列中央选举委员会表示，该国日前举行的议会选举中不存在舞弊行为，选举的公正性也未受到损害。美國民主黨歷史性勝利深入共和黨票倉攻城掠地。兩场一年前还被认为将勢均力敵的美國参议院选举，最終都成为民主黨輕鬆取勝的选戰。\n\n【05 外媒编译】\n接下来看外媒编译。华盛顿压力下甲骨文取消与腾讯价值约70亿美元芯片租赁协议。据英国金融时报报导，在特朗普政府的压力下，甲骨文公司取消了与腾讯签订的价值数十亿美元的芯片租赁合同，这表明为中国人工智能公司提供服务的美国云提供商所受压力日益加剧。由亿万富翁、特朗普支持者埃里森领导的甲骨文与腾讯签署了一份为期五年的租约，以提供在东南亚众多数据中心使用多达10万枚先进人工智能芯片的权限。该合同价值估计为70亿美元，是腾讯最大的海外租赁交易。由于华盛顿和北京的限制，腾讯依照该合同本能够获得无法在中国使用的芯片权限。青藏高原发现全球最早似野犬异豺化石距今约195万年，177万年。中新网北京11月4日电记者11月4日从中国科学院古脊椎动物与古人类研究所江左其杲副研究员团队获悉，该团队与中外合作者最近在青藏高原研究发现一件似野犬异豺下颌化石标本，距今约195万年，177万年，是目前所知全球最早的似野犬异豺化石。乌镇峰会聚焦推动智能体互信互联互操作。中新网浙江乌镇11月4日电2026年世界互联网大会乌镇峰会智能体互信互联互操作全球合作创新，携手构建智能互联网分论坛4日在浙江乌镇举行，智能体信任治理成为与会各方关注的焦点。\n\n【06 政策解读】\n来看政策风向。以下仅为信息梳理，不构成官方解读。中国人民银行加力实施股票回购增持再贷款政策。养老服务消费补贴惠及243万失能老年人。2026世界慕课与在线教育大会在越南举办。具体适用范围与执行口径，请以官方原文为准。\n\n【07 财经观察】\n接下来看财经观察。中非绿色合作何以行稳致远？业界专家把脉非洲能源项目融资难题。中新网岳阳11月4日电非洲拥有极其丰富的水电、风电、光伏、天然气资源，但普遍存在投资周期长、前期投入大、跨境风险复杂、融资渠道有限等痛点，破解难题的核心在于依托政策性金融的定位，创新分层、分场景、多方共担的融资机制。中国进出口银行金融机构部总助黎琼4日在湖南岳阳表示。全球矿业巨头力拓看见中企出海新模式。中新社北京11月4日电一家拥有150多年历史的全球矿业巨头，正从中国看到新的可能。过去，中国对于力拓而言是重要的矿产品市场。如今，这家矿业巨头开始将中国企业的设计、制造、工程建设乃至技术能力，更深度地融入其全球项目中。报告：预计2030年人工智能对全球经济贡献将达22.3万亿美元。中新网浙江乌镇11月4日电11月4日，世界互联网发展报告2026在浙江乌镇发布。报告显示，预计到2030年人工智能对全球经济的贡献将达22.3万亿美元，占当年全球吉迪皮的百分之3.7。财经内容不构成投资建议。\n\n【08 人工智能】\n接下来看人工智能。不靠堆砌数据，让机器人看懂真实物理世界 | 招商局狮子山实验室发布驭物™ 艾勒艾欧艾娜-伊阿尔-35比-诶3比具身推理模型。仅激活3比参数，十项基准全线提升。安索匹克为重要开源项目新增可选安全扫描服务。点击查看原文\u003e。\n\n【09 收尾】\n详细内容与原文链接都在日报里。好的，今天的行星日报已经为您播放完毕，祝您生活愉快，咱们明天再见。", "audio_chapters": ["开场", "今日重点", "热点背景", "环球通讯社", "外媒编译", "政策解读", "财经观察", "人工智能", "收尾"]}, "categories": [{"id": "wire", "name": "环球通讯社", "icon": "globe.asia.australia", "color": "#E05638", "brief": "以中文国际报道为主，外媒官方中文版可达时自动纳入，交叉比对不同视角的硬事实。本期共收录 6 条重点动态。", "items": [{"id": "07010bc8b4d21a12", "title": "尹锡悦违反选举法案二审亦获刑 或致当选无效", "original_title": "尹锡悦违反选举法案二审亦获刑 或致当选无效", "source": "中新网国际", "url": "https://www.chinanews.com.cn/gj/2026/11-04/10726191.shtml", "time": "刚刚", "heat": "", "score": 47.73, "summary": "中新网11月4日电 据韩联社当地时间4日报道，韩国前总统尹锡悦违反《公职选举法》案二审当日宣判，尹锡悦被判有期徒刑1年6个月，缓刑3年。", "takeaway": "聚焦「尹锡悦违反选举法案二审亦获刑 或致当选无效」背后的行业趋势与关键信号。", "interpretation": "多国信源交叉比对，剥离单一立场情绪，提取地缘与宏观硬事实。", "perspective": "信源来自 中新网国际，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "8263fe5bdecffdfb", "title": "以色列中央选举委员会：议会选举不存在舞弊行为", "original_title": "以色列中央选举委员会：议会选举不存在舞弊行为", "source": "中新网国际", "url": "https://www.chinanews.com.cn/gj/2026/11-04/10726163.shtml", "time": "刚刚", "heat": "", "score": 47.64, "summary": "中新社北京11月4日电 耶路撒冷消息：当地时间11月4日，以色列中央选举委员会表示，该国日前举行的议会选举中不存在舞弊行为，选举的公正性也未受到损害。", "takeaway": "聚焦「以色列中央选举委员会：议会选举不存在舞弊行为」背后的行业趋势与关键信号。", "interpretation": "多国信源交叉比对，剥离单一立场情绪，提取地缘与宏观硬事实。", "perspective": "信源来自 中新网国际，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "eb9efab823875fd6", "title": "美國民主黨歷史性勝利 深入共和黨票倉攻城掠地", "original_title": "美國民主黨歷史性勝利 深入共和黨票倉攻城掠地", "source": "英国广播公司", "url": "https://www.bbc.com/zhongwen/articles/c6kgq8l48q2po/trad?at_medium=RSS&at_campaign=rss", "time": "1 小时前", "heat": "", "score": 46.21, "summary": "兩场一年前还被认为将勢均力敵的美國参议院选举，最終都成为民主黨輕鬆取勝的选戰。", "takeaway": "聚焦「美國民主黨歷史性勝利 深入共和黨票倉攻城掠地」背后的行业趋势与关键信号。", "interpretation": "多国信源交叉比对，剥离单一立场情绪，提取地缘与宏观硬事实。", "perspective": "信源来自 英国广播公司，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "dfb9ebc63a3ef36e", "title": "2026年美國中期选举结果实时更新", "original_title": "2026年美國中期选举结果实时更新", "source": "英国广播公司", "url": "https://www.bbc.com/zhongwen/articles/c5rmyrm0n8k8o/trad?at_medium=RSS&at_campaign=rss", "time": "6 小时前", "heat": "", "score": 43.04, "summary": "美國國会由众议院和参议院組成。众议院全部435个议席都会改选，众议员任期固定为兩年。与此同时，参议院100个议席中，有35席亦会进行改选。参议员任期为六年。", "takeaway": "聚焦「2026年美國中期选举结果实时更新」背后的行业趋势与关键信号。", "interpretation": "多国信源交叉比对，剥离单一立场情绪，提取地缘与宏观硬事实。", "perspective": "信源来自 英国广播公司，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "f3c271d60b11faac", "title": "回应“介选”说 国台办指民进党当局无中生有、掩盖施政无能", "original_title": "回应“介选”说 国台办指民进党当局无中生有、掩盖施政无能", "source": "中新网国内", "url": "https://www.chinanews.com.cn/gn/2026/11-04/10726048.shtml", "time": "3 小时前", "heat": "", "score": 42.87, "summary": "中新社北京11月4日电 (记者 李百加 徐雪莹)对于民进党当局宣称要慎防大陆“介入选举”，国务院台办发言人朱凤莲4日在北京指出，这种说法完全是无中生有、颠倒黑白；目的是掩盖其施政无能，挑起敌视大陆情绪以骗取选票。", "takeaway": "聚焦「回应“介选”说 国台办指民进党当局无中生有、掩盖施政无能」背后的行业趋势与关键信号。", "interpretation": "多国信源交叉比对，剥离单一立场情绪，提取地缘与宏观硬事实。", "perspective": "信源来自 中新网国内，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "cf87bdbfdcc05d60", "title": "中国团队领衔地震成像研究发现地球板块双撕裂关键证据", "original_title": "中国团队领衔地震成像研究发现地球板块双撕裂关键证据", "source": "中新网国内", "url": "https://www.chinanews.com.cn/gn/2026/11-04/10726205.shtml", "time": "刚刚", "heat": "", "score": 41.96, "summary": "中新网北京11月4日电 (记者 孙自法)地球板块(也称板片)运动如何由大洋俯冲转向大陆碰撞？这一过程中会发生哪些深部构造现象？这是固体地球科学关注的核心问题和难题。", "takeaway": "聚焦「中国团队领衔地震成像研究发现地球板块双撕裂关键证据」背后的行业趋势与关键信号。", "interpretation": "多国信源交叉比对，剥离单一立场情绪，提取地缘与宏观硬事实。", "perspective": "信源来自 中新网国内，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}]}, {"id": "ai", "name": "人工智能", "icon": "brain.head.profile", "color": "#7C5CFF", "brief": "汇集量子位、机器之心、InfoQ 中文、Solidot 等中文科技媒体的模型与产业动态。本期共收录 6 条重点动态。", "items": [{"id": "68d6e2cfb53f89d3", "title": "不靠堆砌数据，让机器人看懂真实物理世界 | 招商局狮子山实验室发布「驭物™ Lion-ER-35B-A3B」具身推理模型", "original_title": "不靠堆砌数据，让机器人看懂真实物理世界 | 招商局狮子山实验室发布「驭物™ Lion-ER-35B-A3B」具身推理模型", "source": "量子位", "url": "https://www.qbitai.com/2026/11/507586.html", "time": "1 小时前", "heat": "", "score": 50.76, "summary": "仅激活3B参数，十项基准全线提升！", "takeaway": "聚焦「不靠堆砌数据，让机器人看懂真实物理世界 | 招商局狮子山」背后的行业趋势与关键信号。", "interpretation": "关注模型能力边界、算力能源约束、商业化留存率与真实工作流落地。", "perspective": "信源来自 量子位，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "fa8cdcff922673ee", "title": "Anthropic 为重要开源项目新增可选安全扫描服务", "original_title": "Anthropic 为重要开源项目新增可选安全扫描服务", "source": "InfoQ中文", "url": "https://www.infoq.cn/article/hdmi6FdjpYSEvuMhPOAa?utm_source=rss&utm_medium=article", "time": "刚刚", "heat": "", "score": 50.0, "summary": "点击查看原文\u003e", "takeaway": "聚焦「Anthropic 为重要开源项目新增可选安全扫描服务」背后的行业趋势与关键信号。", "interpretation": "关注模型能力边界、算力能源约束、商业化留存率与真实工作流落地。", "perspective": "信源来自 InfoQ中文，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "878f1a22486a70a6", "title": "谷歌 Data Agent Kit 正式发布：安全防护分为 Skill 与 IAM", "original_title": "谷歌 Data Agent Kit 正式发布：安全防护分为 Skill 与 IAM", "source": "InfoQ中文", "url": "https://www.infoq.cn/article/UtKS9EofSoyd2P7Otx7e?utm_source=rss&utm_medium=article", "time": "刚刚", "heat": "", "score": 47.0, "summary": "点击查看原文\u003e", "takeaway": "聚焦「谷歌 Data Agent Kit 正式发布：安全防护分」背后的行业趋势与关键信号。", "interpretation": "关注模型能力边界、算力能源约束、商业化留存率与真实工作流落地。", "perspective": "信源来自 InfoQ中文，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "f8755e7c1f1478c4", "title": "首个：华为云智果 AgentArts 获中国信通院最高等级评级", "original_title": "首个：华为云智果 AgentArts 获中国信通院最高等级评级", "source": "IT之家", "url": "https://www.ithome.com/1/022/406.htm", "time": "刚刚", "heat": "", "score": 46.78, "summary": "华为官方今日宣布，华为云智果 AgentArts 智能体平台近日顺利通过中国信通院组织的可信 AI 企业级智能体平台评估， 是首个通过该项测评，并获得当前最高等级（4+ 级）的产品 。 据介绍，本次评估依据《企业级智能体技术要求》，围绕企业级智能体平台的技术能力、应用能力和服务能力三方面展开，全面考察平台在智能体认知、规划、执行、业务集成、知识管理、运行维护及安全合规等方面的综合能力。 IT之家查询获悉，云智果（AgentArts）智能体平台是华为面向企业核心业务场景打造的智能体平台，支持多种框架（LangChain / LangGraph 或自研框架等）和模型， 并拥有四大核心能力：生产级长程任务、企业级安全环境、行业知识深度和…", "takeaway": "聚焦「首个：华为云智果 AgentArts 获中国信通院最高等」背后的行业趋势与关键信号。", "interpretation": "关注模型能力边界、算力能源约束、商业化留存率与真实工作流落地。", "perspective": "信源来自 IT之家，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "01011f31d75d3c92", "title": "Nexus Mods 公布 AI 生成内容政策", "original_title": "Nexus Mods 公布 AI 生成内容政策", "source": "奇客Solidot", "url": "https://www.solidot.org/story?sid=85794", "time": "1 小时前", "heat": "", "score": 45.27, "summary": "最大 PC 游戏 Mod 分享托管平台 Nexus Mods 公布了 AI 生成内容政策。Nexus Mods 没有禁止 AI 生成 Mod，但对此类 Mod 的分享设定了更严格的规定。新上传 Mod 必须披露是否使用 AI，AI 辅助 Mod 必须说明如何使用 AI 以及 AI 的使用范围。现有 Mod 需在 2027 年 1 月 2 日前符合新要求。如果 Mod 作者无视平台方提出的要求，可能会面临权限受限或被下架的后果。它计划针对 AI 使用、AI 模型训练、分支和衍生 Mod 引入新的授权选项，默认选项为“需征求作者同意（Ask me）”。Nexus Mods 承诺绝不会利用用户上传的 Mod 训练 AI，也不会将其出售或…", "takeaway": "聚焦「Nexus Mods 公布 AI 生成内容政策」背后的行业趋势与关键信号。", "interpretation": "关注模型能力边界、算力能源约束、商业化留存率与真实工作流落地。", "perspective": "信源来自 奇客Solidot，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "d1c903e7a9ec24f9", "title": "奇瑞全新捷途自由者 7 燃油 SUV 上市，限时焕新价 8.99 万元起", "original_title": "奇瑞全新捷途自由者 7 燃油 SUV 上市，限时焕新价 8.99 万元起", "source": "IT之家", "url": "https://www.ithome.com/1/022/408.htm", "time": "刚刚", "heat": "", "score": 43.89, "summary": "在今晚举行的全新捷途自由者 7 上市发布会上，奇瑞全新捷途自由者 7 正式上市，售价区间为 11.39-13.49 万元，限时焕新价 8.99-11.09 万元。 1.5TGDI 轻享：上市指导价 11.39 万元，限时焕新价 8.99 万元 1.5TGDI 舒享：上市指导价 12.39 万元，限时焕新价 9.99 万元 1.5TGDI 舒享 +：上市指导价 12.99 万元，限时焕新价 10.59 万元 1.5TGDI 尊享：上市指导价 13.49 万元，限时焕新价 11.09 万元 IT之家获悉，新车定位在捷途自由者 7 PLUS 之下，搭载 1.5T+7DCT 的动力组合，未来自由者 7 与自由者 7 PLUS 将分别面向城…", "takeaway": "聚焦「奇瑞全新捷途自由者 7 燃油 SUV 上市，限时焕新价 」背后的行业趋势与关键信号。", "interpretation": "关注模型能力边界、算力能源约束、商业化留存率与真实工作流落地。", "perspective": "信源来自 IT之家，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}]}, {"id": "infogap", "name": "信息差", "icon": "sparkles", "color": "#3B7BFF", "brief": "汇集极客公园、36氪、虎嗅、钛媒体、开源中国等中文科技商业媒体，呈现产业一线温差。本期共收录 6 条重点动态。", "items": [{"id": "01011f31d75d3c92", "title": "Nexus Mods 公布 AI 生成内容政策", "original_title": "Nexus Mods 公布 AI 生成内容政策", "source": "奇客Solidot", "url": "https://www.solidot.org/story?sid=85794", "time": "1 小时前", "heat": "", "score": 50.26, "summary": "最大 PC 游戏 Mod 分享托管平台 Nexus Mods 公布了 AI 生成内容政策。Nexus Mods 没有禁止 AI 生成 Mod，但对此类 Mod 的分享设定了更严格的规定。新上传 Mod 必须披露是否使用 AI，AI 辅助 Mod 必须说明如何使用 AI 以及 AI 的使用范围。现有 Mod 需在 2027 年 1 月 2 日前符合新要求。如果 Mod 作者无视平台方提出的要求，可能会面临权限受限或被下架的后果。它计划针对 AI 使用、AI 模型训练、分支和衍生 Mod 引入新的授权选项，默认选项为“需征求作者同意（Ask me）”。Nexus Mods 承诺绝不会利用用户上传的 Mod 训练 AI，也不会将其出售或…", "takeaway": "聚焦「Nexus Mods 公布 AI 生成内容政策」背后的行业趋势与关键信号。", "interpretation": "对比硅谷一手技术动向与国内商业落地叙事，捕捉跨市场信息差。", "perspective": "信源来自 奇客Solidot，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "f8755e7c1f1478c4", "title": "首个：华为云智果 AgentArts 获中国信通院最高等级评级", "original_title": "首个：华为云智果 AgentArts 获中国信通院最高等级评级", "source": "IT之家", "url": "https://www.ithome.com/1/022/406.htm", "time": "刚刚", "heat": "", "score": 49.77, "summary": "华为官方今日宣布，华为云智果 AgentArts 智能体平台近日顺利通过中国信通院组织的可信 AI 企业级智能体平台评估， 是首个通过该项测评，并获得当前最高等级（4+ 级）的产品 。 据介绍，本次评估依据《企业级智能体技术要求》，围绕企业级智能体平台的技术能力、应用能力和服务能力三方面展开，全面考察平台在智能体认知、规划、执行、业务集成、知识管理、运行维护及安全合规等方面的综合能力。 IT之家查询获悉，云智果（AgentArts）智能体平台是华为面向企业核心业务场景打造的智能体平台，支持多种框架（LangChain / LangGraph 或自研框架等）和模型， 并拥有四大核心能力：生产级长程任务、企业级安全环境、行业知识深度和…", "takeaway": "聚焦「首个：华为云智果 AgentArts 获中国信通院最高等」背后的行业趋势与关键信号。", "interpretation": "对比硅谷一手技术动向与国内商业落地叙事，捕捉跨市场信息差。", "perspective": "信源来自 IT之家，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "5fc3f47813e0098b", "title": "苹果开始在中国推出 Apple Intelligence", "original_title": "苹果开始在中国推出 Apple Intelligence", "source": "奇客Solidot", "url": "https://www.solidot.org/story?sid=85793", "time": "2 小时前", "heat": "", "score": 46.62, "summary": "苹果从 11 月 4 日起开始在中国推出 AI 功能 Apple Intelligence，中国用户可通过最新的 iOS 开发者 Beta 版进行测试，AI 功能将于 12 月随 iOS 27.3 的发布正式推出。中国版本的 Apple Intelligence 是苹果和阿里巴巴合作推出的，基于阿里巴巴的千问模型。首批 AI 功能包括实时翻译、写作工具、视觉智能、照片 app 的消除工具、智绘表情、照片 app 中的自然语言搜索、在照片 app 中创建回忆影片、识别优先邮件、邮件摘要、智能回复、通知摘要、首要通知、减少干扰、备忘录 app 中的音频转录摘要、通话转录文本的摘要、输⼊⽂字与 Siri 对话、Siri 能接入千问（需登…", "takeaway": "聚焦「苹果开始在中国推出 Apple Intelligence」背后的行业趋势与关键信号。", "interpretation": "对比硅谷一手技术动向与国内商业落地叙事，捕捉跨市场信息差。", "perspective": "信源来自 奇客Solidot，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "53126d5b321eac5a", "title": "山西发布全国首个城市停车 AI 智能体“泊邻”：可整合实时数据生成热力图实现车位灵活规划", "original_title": "山西发布全国首个城市停车 AI 智能体“泊邻”：可整合实时数据生成热力图实现车位灵活规划", "source": "IT之家", "url": "https://www.ithome.com/1/022/379.htm", "time": "刚刚", "heat": "", "score": 46.39, "summary": "据“科技日报”，在近日举行的 2026 中国城市停车产业大会中，山西发布全国首个城市停车 AI 智能体“泊邻”。 据介绍，该智能体依托山西建投静态交通公司自研智慧停车平台打造， 其主要功能是整合路侧泊位、公共车场、小区共享车位的全量实时数据，自动生成城市停车热力图、停车困难指数 ，实现灵活泊位规划、定价策略，主动向业主推送车位共享邀约与预估收益；同时为周边找位车主精准推送可用车位，规划最优行车路线，减少车主绕路找位时间。 负责人介绍，“泊邻”AI 智能体实测能把车位日均周转率从 2.1 次提升至 3.5 次，单车位综合人力成本降低 60%—70%。后续山西有关部门将进一步聚焦提升全社会车位整体利用效率，开放应用场景、平台资源与接口…", "takeaway": "聚焦「山西发布全国首个城市停车 AI 智能体“泊邻”：可整合实」背后的行业趋势与关键信号。", "interpretation": "对比硅谷一手技术动向与国内商业落地叙事，捕捉跨市场信息差。", "perspective": "信源来自 IT之家，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "eafd6bbee16bd37d", "title": "大模型时代，智驾芯片的算力赢学失效了", "original_title": "大模型时代，智驾芯片的算力赢学失效了", "source": "钛媒体", "url": "https://www.tmtpost.com/8193596.html", "time": "1 小时前", "heat": "", "score": 45.12, "summary": "玩不过通用芯片，就玩定制芯片。", "takeaway": "聚焦「大模型时代，智驾芯片的算力赢学失效了」背后的行业趋势与关键信号。", "interpretation": "对比硅谷一手技术动向与国内商业落地叙事，捕捉跨市场信息差。", "perspective": "信源来自 钛媒体，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "0978d347bf56a2d3", "title": "调问更新 10.19 ~ 11.3：测评计分能力全面升级，问卷设计与管理体验持续优化", "original_title": "调问更新 10.19 ~ 11.3：测评计分能力全面升级，问卷设计与管理体验持续优化", "source": "开源中国", "url": "https://www.oschina.net/news/503394", "time": "3 小时前", "heat": "", "score": 42.99, "summary": "DWSurvey 更新日志 测评计分能力全面升级，问卷设计与管理体验持续优化 坚持前后端代码 100% 开源 助力企业建设自主可控的问卷调研系统 官网地址www.diaowen.net ➔ 源码下载Gitee 仓库 ➔ 本次更新：新增迫选题、量表反向计分、维度结果判定及公式赋分等功能，进一步完善测评应用能力。同时优化规则引擎、AI 外呼、团队...", "takeaway": "聚焦「调问更新 10.19 ~ 11.3：测评计分能力全面升级」背后的行业趋势与关键信号。", "interpretation": "对比硅谷一手技术动向与国内商业落地叙事，捕捉跨市场信息差。", "perspective": "信源来自 开源中国，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}]}, {"id": "economy", "name": "财经观察", "icon": "chart.line.uptrend.xyaxis", "color": "#D9822B", "brief": "汇集中新网财经、第一财经、界面新闻等中文财经报道，跟踪宏观与产业周期。不构成投资建议。本期共收录 6 条重点动态。", "items": [{"id": "df385087a5d7aaca", "title": "中非绿色合作何以行稳致远？业界专家把脉非洲能源项目融资难题", "original_title": "中非绿色合作何以行稳致远？业界专家把脉非洲能源项目融资难题", "source": "中新网财经", "url": "https://www.chinanews.com.cn/cj/2026/11-04/10726199.shtml", "time": "刚刚", "heat": "", "score": 47.88, "summary": "中新网岳阳11月4日电 (张雪盈)“非洲拥有极其丰富的水电、风电、光伏、天然气资源，但普遍存在投资周期长、前期投入大、跨境风险复杂、融资渠道有限等痛点，破解难题的核心在于依托政策性金融的定位，创新分层、分场景、多方共担的融资机制。”中国进出口银行金融机构部总助黎琼4日在湖南岳阳表示。", "takeaway": "聚焦「中非绿色合作何以行稳致远？业界专家把脉非洲能源项目融资难」背后的行业趋势与关键信号。", "interpretation": "把单家公司财报与美股/A股资金风格放进宏观利率与产业周期中交叉审视。", "perspective": "信源来自 中新网财经，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "2bbab29a4bc6fcc6", "title": "（投资中国）全球矿业巨头力拓“看见”中企出海新模式", "original_title": "（投资中国）全球矿业巨头力拓“看见”中企出海新模式", "source": "中新网财经", "url": "https://www.chinanews.com.cn/cj/2026/11-04/10726139.shtml", "time": "1 小时前", "heat": "", "score": 47.02, "summary": "中新社北京11月4日电 (记者 庞无忌)一家拥有150多年历史的全球矿业巨头，正从中国看到新的可能。过去，中国对于力拓而言是重要的矿产品市场。如今，这家矿业巨头开始将中国企业的设计、制造、工程建设乃至技术能力，更深度地融入其全球项目中。", "takeaway": "聚焦「（投资中国）全球矿业巨头力拓“看见”中企出海新模式」背后的行业趋势与关键信号。", "interpretation": "把单家公司财报与美股/A股资金风格放进宏观利率与产业周期中交叉审视。", "perspective": "信源来自 中新网财经，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "f44fb5e6dd665884", "title": "报告：预计2030年AI对全球经济贡献将达22.3万亿美元", "original_title": "报告：预计2030年AI对全球经济贡献将达22.3万亿美元", "source": "中新网国内", "url": "https://www.chinanews.com.cn/gn/2026/11-04/10726112.shtml", "time": "2 小时前", "heat": "", "score": 39.71, "summary": "中新网浙江乌镇11月4日电(鲍梦妮)11月4日，《世界互联网发展报告2026》(下称《报告》)在浙江乌镇发布。《报告》显示，预计到2030年人工智能(AI)对全球经济的贡献将达22.3万亿美元，占当年全球GDP的3.7%。", "takeaway": "聚焦「报告：预计2030年AI对全球经济贡献将达22.3万亿美」背后的行业趋势与关键信号。", "interpretation": "把单家公司财报与美股/A股资金风格放进宏观利率与产业周期中交叉审视。", "perspective": "信源来自 中新网国内，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "22545586e9f15543", "title": "谁在害怕“字节时间”？", "original_title": "谁在害怕“字节时间”？", "source": "钛媒体", "url": "https://www.tmtpost.com/8190644.html", "time": "1 小时前", "heat": "", "score": 38.13, "summary": "“时间”都去哪儿了？", "takeaway": "聚焦「谁在害怕“字节时间”？」背后的行业趋势与关键信号。", "interpretation": "把单家公司财报与美股/A股资金风格放进宏观利率与产业周期中交叉审视。", "perspective": "信源来自 钛媒体，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "eafd6bbee16bd37d", "title": "大模型时代，智驾芯片的算力赢学失效了", "original_title": "大模型时代，智驾芯片的算力赢学失效了", "source": "钛媒体", "url": "https://www.tmtpost.com/8193596.html", "time": "1 小时前", "heat": "", "score": 38.12, "summary": "玩不过通用芯片，就玩定制芯片。", "takeaway": "聚焦「大模型时代，智驾芯片的算力赢学失效了」背后的行业趋势与关键信号。", "interpretation": "把单家公司财报与美股/A股资金风格放进宏观利率与产业周期中交叉审视。", "perspective": "信源来自 钛媒体，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "cf87bdbfdcc05d60", "title": "中国团队领衔地震成像研究发现地球板块双撕裂关键证据", "original_title": "中国团队领衔地震成像研究发现地球板块双撕裂关键证据", "source": "中新网国内", "url": "https://www.chinanews.com.cn/gn/2026/11-04/10726205.shtml", "time": "刚刚", "heat": "", "score": 37.95, "summary": "中新网北京11月4日电 (记者 孙自法)地球板块(也称板片)运动如何由大洋俯冲转向大陆碰撞？这一过程中会发生哪些深部构造现象？这是固体地球科学关注的核心问题和难题。", "takeaway": "聚焦「中国团队领衔地震成像研究发现地球板块双撕裂关键证据」背后的行业趋势与关键信号。", "interpretation": "把单家公司财报与美股/A股资金风格放进宏观利率与产业周期中交叉审视。", "perspective": "信源来自 中新网国内，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}]}, {"id": "policy", "name": "政策解读", "icon": "building.columns", "color": "#2E5A88", "brief": "来源：中国政府网、中国人民银行、国家发改委、财政部等公开政策信息。仅为信息梳理，不构成官方解读。本期共收录 5 条重点动态。", "items": [{"id": "a3d277b340993d3c", "title": "中国人民银行加力实施股票回购增持再贷款政策", "original_title": "中国人民银行加力实施股票回购增持再贷款政策", "source": "中国人民银行", "url": "https://www.pbc.gov.cn/goutongjiaoliu/113456/113469/2026110408502315269/index.html", "time": "20 小时前", "heat": "", "score": 36.41, "summary": "中国人民银行加力实施股票回购增持再贷款政策（来源：中国人民银行官方公开政策发布）。", "takeaway": "聚焦「中国人民银行加力实施股票回购增持再贷款政策」背后的行业趋势与关键信号。", "interpretation": "重点关注工具创设背景、适用主体、执行时间与对市场流动性及企业的实质影响。", "perspective": "信源来自 中国人民银行，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": "投资者"}, {"id": "9aabc14764a1a43f", "title": "养老服务消费补贴惠及243万失能老年人", "original_title": "养老服务消费补贴惠及243万失能老年人", "source": "新华网", "url": "http://www.news.cn/politics/20261104/7c03220cefe449c68ae30372f9df9dc0/c.html", "time": "20 小时前", "heat": "", "score": 33.41, "summary": "养老服务消费补贴惠及243万失能老年人（来源：新华网官方公开政策发布）。", "takeaway": "聚焦「养老服务消费补贴惠及243万失能老年人」背后的行业趋势与关键信号。", "interpretation": "重点关注工具创设背景、适用主体、执行时间与对市场流动性及企业的实质影响。", "perspective": "信源来自 新华网，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": "普通人、创业者"}, {"id": "9a8902f159aeadff", "title": "2026世界慕课与在线教育大会在越南举办", "original_title": "2026世界慕课与在线教育大会在越南举办", "source": "教育部", "url": "http://www.moe.gov.cn/jyb_xwfb/gzdt_gzdt/s5987/202611/t20261104_1457140.html", "time": "20 小时前", "heat": "", "score": 31.41, "summary": "2026世界慕课与在线教育大会在越南举办（来源：教育部官方公开政策发布）。", "takeaway": "聚焦「2026世界慕课与在线教育大会在越南举办」背后的行业趋势与关键信号。", "interpretation": "重点关注工具创设背景、适用主体、执行时间与对市场流动性及企业的实质影响。", "perspective": "信源来自 教育部，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": "普通人"}, {"id": "d0be2c48c9ee7ba1", "title": "证券、基金、保险公司互换便利（SFISF）操作结果公告 〔2026〕第1号", "original_title": "证券、基金、保险公司互换便利（SFISF）操作结果公告 〔2026〕第1号", "source": "中国人民银行", "url": "https://www.pbc.gov.cn/goutongjiaoliu/113456/113469/2026110313380716818/index.html", "time": "1 天前", "heat": "", "score": 24.41, "summary": "证券、基金、保险公司互换便利（SFISF）操作结果公告 〔2026〕第1号（来源：中国人民银行官方公开政策发布）。", "takeaway": "聚焦「证券、基金、保险公司互换便利（SFISF）操作结果公告 」背后的行业趋势与关键信号。", "interpretation": "重点关注工具创设背景、适用主体、执行时间与对市场流动性及企业的实质影响。", "perspective": "信源来自 中国人民银行，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": "投资者"}, {"id": "ffb09adee50858c5", "title": "国家知识产权局印发《专利和商标审查“十五五”规划》", "original_title": "国家知识产权局印发《专利和商标审查“十五五”规划》", "source": "新华网", "url": "http://www.news.cn/politics/20261103/031ab1987235455f874687273b5a05f4/c.html", "time": "1 天前", "heat": "", "score": 21.41, "summary": "国家知识产权局印发《专利和商标审查“十五五”规划》（来源：新华网官方公开政策发布）。", "takeaway": "聚焦「国家知识产权局印发《专利和商标审查“十五五”规划》」背后的行业趋势与关键信号。", "interpretation": "重点关注工具创设背景、适用主体、执行时间与对市场流动性及企业的实质影响。", "perspective": "信源来自 新华网，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": "普通人"}]}, {"id": "opensource", "name": "开源动态", "icon": "chevron.left.forwardslash.chevron.right", "color": "#22A06B", "brief": "汇总开源中国、InfoQ 中文与 Solidot 的中文开源项目与工程工具动态。本期共收录 5 条重点动态。", "items": [{"id": "f8755e7c1f1478c4", "title": "首个：华为云智果 AgentArts 获中国信通院最高等级评级", "original_title": "首个：华为云智果 AgentArts 获中国信通院最高等级评级", "source": "IT之家", "url": "https://www.ithome.com/1/022/406.htm", "time": "刚刚", "heat": "", "score": 49.77, "summary": "华为官方今日宣布，华为云智果 AgentArts 智能体平台近日顺利通过中国信通院组织的可信 AI 企业级智能体平台评估， 是首个通过该项测评，并获得当前最高等级（4+ 级）的产品 。 据介绍，本次评估依据《企业级智能体技术要求》，围绕企业级智能体平台的技术能力、应用能力和服务能力三方面展开，全面考察平台在智能体认知、规划、执行、业务集成、知识管理、运行维护及安全合规等方面的综合能力。 IT之家查询获悉，云智果（AgentArts）智能体平台是华为面向企业核心业务场景打造的智能体平台，支持多种框架（LangChain / LangGraph 或自研框架等）和模型， 并拥有四大核心能力：生产级长程任务、企业级安全环境、行业知识深度和…", "takeaway": "聚焦「首个：华为云智果 AgentArts 获中国信通院最高等」背后的行业趋势与关键信号。", "interpretation": "关注工程痛点、License 授权边界、架构设计及能否直接嵌入现有开发工作流。", "perspective": "信源来自 IT之家，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "5fc3f47813e0098b", "title": "苹果开始在中国推出 Apple Intelligence", "original_title": "苹果开始在中国推出 Apple Intelligence", "source": "奇客Solidot", "url": "https://www.solidot.org/story?sid=85793", "time": "2 小时前", "heat": "", "score": 44.62, "summary": "苹果从 11 月 4 日起开始在中国推出 AI 功能 Apple Intelligence，中国用户可通过最新的 iOS 开发者 Beta 版进行测试，AI 功能将于 12 月随 iOS 27.3 的发布正式推出。中国版本的 Apple Intelligence 是苹果和阿里巴巴合作推出的，基于阿里巴巴的千问模型。首批 AI 功能包括实时翻译、写作工具、视觉智能、照片 app 的消除工具、智绘表情、照片 app 中的自然语言搜索、在照片 app 中创建回忆影片、识别优先邮件、邮件摘要、智能回复、通知摘要、首要通知、减少干扰、备忘录 app 中的音频转录摘要、通话转录文本的摘要、输⼊⽂字与 Siri 对话、Siri 能接入千问（需登…", "takeaway": "聚焦「苹果开始在中国推出 Apple Intelligence」背后的行业趋势与关键信号。", "interpretation": "关注工程痛点、License 授权边界、架构设计及能否直接嵌入现有开发工作流。", "perspective": "信源来自 奇客Solidot，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "878f1a22486a70a6", "title": "谷歌 Data Agent Kit 正式发布：安全防护分为 Skill 与 IAM", "original_title": "谷歌 Data Agent Kit 正式发布：安全防护分为 Skill 与 IAM", "source": "InfoQ中文", "url": "https://www.infoq.cn/article/UtKS9EofSoyd2P7Otx7e?utm_source=rss&utm_medium=article", "time": "刚刚", "heat": "", "score": 44.0, "summary": "点击查看原文\u003e", "takeaway": "聚焦「谷歌 Data Agent Kit 正式发布：安全防护分」背后的行业趋势与关键信号。", "interpretation": "关注工程痛点、License 授权边界、架构设计及能否直接嵌入现有开发工作流。", "perspective": "信源来自 InfoQ中文，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "3c896fefa8c95cbb", "title": "同一个模型从 30 分到 95 分：拉开差距的不是模型，是Harness", "original_title": "同一个模型从 30 分到 95 分：拉开差距的不是模型，是Harness", "source": "InfoQ中文", "url": "https://www.infoq.cn/article/C1C1DThg8z1Dy0rZAmLB?utm_source=rss&utm_medium=article", "time": "刚刚", "heat": "", "score": 44.0, "summary": "点击查看原文\u003e", "takeaway": "聚焦「同一个模型从 30 分到 95 分：拉开差距的不是模型，」背后的行业趋势与关键信号。", "interpretation": "关注工程痛点、License 授权边界、架构设计及能否直接嵌入现有开发工作流。", "perspective": "信源来自 InfoQ中文，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}]}, {"id": "games", "name": "游戏资讯", "icon": "gamecontroller", "color": "#776493", "brief": "汇总游戏作品、发行动态与行业新闻，信息以原文为准。本期共收录 5 条重点动态。", "items": [{"id": "0affa513817264f2", "title": "东映游戏首次参展中国独立游戏展会\"WePlay Expo 2026\"", "original_title": "东映游戏首次参展中国独立游戏展会\"WePlay Expo 2026\"", "source": "机核", "url": "https://www.gcores.com/articles/221931", "time": "3 小时前", "heat": "", "score": 56.65, "summary": "东映株式会社旗下游戏业务品牌\"东映游戏（Toei Games）\"宣布，将参展\"WePlay Expo 2026\"。该展会是中国最大规模的独立游戏展会之一，将于2026年11月21日（周六）至11月22日（周日）在上海国家会展中心举办。 这是东映游戏首次参展WePlay Expo，也是首次亮相大中华地区的游戏展会。届时，展位将开放《KILLA》《HINO》《DEBUG：涅菲米》三款作品的试玩。 ▲展位效果图 ◆展会概要及参展作品 WePlay Expo是由CiGA（中国独立游戏联盟）主办的中国最大规模独立游戏展会之一。去年展会汇聚了来自中国国内外的500余款作品和超过2万名观众。观众可以试玩PC、主机、移动端等多平台作品。展会期间还…", "takeaway": "聚焦「东映游戏首次参展中国独立游戏展会\"WePlay Expo」背后的行业趋势与关键信号。", "interpretation": "关注游戏正式发布、平台更新与玩家可实际体验的变化。", "perspective": "信源来自 机核，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "28a0d012325aec2a", "title": "《无主之地》全系列销量突破一亿份", "original_title": "《无主之地》全系列销量突破一亿份", "source": "机核", "url": "https://www.gcores.com/articles/221894", "time": "11 小时前", "heat": "", "score": 54.98, "summary": "Gearbox 宣布，《无主之地》全系列全球累计销量已正式突破1亿份。与此同时，该系列最新作《无主之地4》发售已满一年，并完成了首个年度的内容更新路线图。在上线的第一年中，《无主之地4》陆续推出了两部故事包、五部赏金包和两名全新寻宝猎人，同时更新了多项游戏功能与活动。 官方确认，每周活动更新和社区挑战后续仍将继续维持。此外，团队正在制作定于2027年推出的《无主之地4》新内容，同时开始评估该系列的长期走向。官方表示，将继续通过社交平台与 Gearbox Devcast 直播节目收集玩家意见，具体后续计划将在筹备完成后公布。 与此同时，玩家慈善活动 The Hunt 将于11月6日开启。据悉，Gearbox 与2K旗下公益部门 2K…", "takeaway": "聚焦「《无主之地》全系列销量突破一亿份」背后的行业趋势与关键信号。", "interpretation": "关注游戏正式发布、平台更新与玩家可实际体验的变化。", "perspective": "信源来自 机核，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "b4a7f35598b19ffc", "title": "具怀旧气息足球动作游戏《踢球上学记 Kick》正式发售 开发团队：期望唤起玩家童年回忆", "original_title": "具怀旧气息足球动作游戏《踢球上学记 Kick》正式发售 开发团队：期望唤起玩家童年回忆", "source": "巴哈姆特", "url": "https://gnn.gamer.com.tw/detail.php?sn=314463", "time": "2 小时前", "heat": "", "score": 49.4, "summary": "独立游戏开发团队 nospacelost 与发行商 Shoreline Games 旗下足球题材新作《踢球上学记（暫譯，原名：Kick）》正式发售，同步释出新上市影片帶領玩家穿越各种场景、挑戰各种任務。 《踢球上学记》是一款以怀旧气息呈现的足球动作游戏，故事描述....", "takeaway": "聚焦「具怀旧气息足球动作游戏《踢球上学记 Kick》正式发售 」背后的行业趋势与关键信号。", "interpretation": "关注游戏正式发布、平台更新与玩家可实际体验的变化。", "perspective": "信源来自 巴哈姆特，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "3164742d283738b0", "title": "经营猛男脱毛沙龙店 恶搞模拟新作《脱毛沙龙模拟器》确定 11 月 10 日发售", "original_title": "经营猛男脱毛沙龙店 恶搞模拟新作《脱毛沙龙模拟器》确定 11 月 10 日发售", "source": "巴哈姆特", "url": "https://gnn.gamer.com.tw/detail.php?sn=314487", "time": "刚刚", "heat": "", "score": 47.75, "summary": "欢迎來到猛男脱毛沙龙！由游戏团队 Yoshio Games 自制的恶搞模拟经营游戏《脱毛沙龙模拟器》确定将于 11 月 10 日发售。玩家将出任首席脱毛技師，接待一群毛茸茸的顧客，把濃密体毛清理得一乾二淨，把街边小店做成猛男扎堆的人气沙龙。 《脱毛沙龙模拟器》是一款经营男士專用沙龙的经营模....", "takeaway": "聚焦「经营猛男脱毛沙龙店 恶搞模拟新作《脱毛沙龙模拟器》确定 」背后的行业趋势与关键信号。", "interpretation": "关注游戏正式发布、平台更新与玩家可实际体验的变化。", "perspective": "信源来自 巴哈姆特，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "19ae5957160b4208", "title": "索尼 SIE 获澳洲消费者权益倡导组织 2026 年度“黑心奖”：取消生产实体光盘、数字游戏所有权争议性政策...", "original_title": "索尼 SIE 获澳洲消费者权益倡导组织 2026 年度“黑心奖”：取消生产实体光盘、数字游戏所有权争议性政策...", "source": "IT之家", "url": "https://www.ithome.com/1/022/405.htm", "time": "刚刚", "heat": "", "score": 45.69, "summary": "澳大利亚消费者权益倡导组织 Choice 日前公布 2026 年度“黑心奖”（Shonky Award）获奖名单，索尼互动娱乐（SIE）因计划停止生产 PlayStation 实体游戏光盘，以及数字游戏所有权政策等问题入选。 Choice 首席执行官 Monique Perry 表示，索尼今年入选主要是因为该公司“要求消费者付费游玩游戏，却不让消费者真正拥有游戏”，依照索尼观念，消费者购买数字游戏后，实际上获得的只是访问和使用相关内容的授权，而非真正拥有数字内容。 公开信息显示，Choice 是一家非营利组织，每年都会举办“黑心奖”，旨在揭露当年表现不佳的产品，以及损害消费者权益的企业行为。值得一提的是，Choice 过去颁发的部…", "takeaway": "聚焦「索尼 SIE 获澳洲消费者权益倡导组织 2026 年度“」背后的行业趋势与关键信号。", "interpretation": "关注游戏正式发布、平台更新与玩家可实际体验的变化。", "perspective": "信源来自 IT之家，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}]}, {"id": "health", "name": "健康生活", "icon": "heart.text.square", "color": "#D65050", "brief": "本期共收录 4 条重点动态。", "items": [{"id": "817813fb18f56775", "title": "糖尿病防控关键在“早” 专家支招避开误区科学控糖", "original_title": "糖尿病防控关键在“早” 专家支招避开误区科学控糖", "source": "中新网健康", "url": "https://www.chinanews.com.cn/jk/2026/11-04/10726154.shtml", "time": "1 小时前", "heat": "", "score": 45.29, "summary": "中新网长沙11月4日电 (付敬懿)普通人怎么做才能远离糖尿病？糖尿病患者如何在规范用药的基础上科学管理血糖？中南大学湘雅二医院副院长、代谢内分泌科主任医师肖扬4日表示，糖尿病可防可控的关键在一个“早”字，而诸如“食疗替代药物”“血糖正常就停药”“胰岛素会上瘾”等说法均为误区。", "takeaway": "聚焦「糖尿病防控关键在“早” 专家支招避开误区科学控糖」背后的行业趋势与关键信号。", "interpretation": "追踪生物医药临床突破、医疗并购与公共卫生进展；不构成个人医疗建议。", "perspective": "信源来自 中新网健康，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "8059dd51bf9a8f4e", "title": "青藏高原发现全球最早似野犬异豺化石 距今约195万年—177万年", "original_title": "青藏高原发现全球最早似野犬异豺化石 距今约195万年—177万年", "source": "中新网社会", "url": "https://www.chinanews.com.cn/sh/2026/11-04/10726203.shtml", "time": "刚刚", "heat": "", "score": 41.93, "summary": "中新网北京11月4日电 (记者 孙自法)记者11月4日从中国科学院古脊椎动物与古人类研究所(古脊椎所)江左其杲副研究员团队获悉，该团队与中外合作者最近在青藏高原研究发现一件似野犬异豺下颌化石标本，距今约195万年—177万年，是目前所知全球最早的似野犬异豺化石。", "takeaway": "聚焦「青藏高原发现全球最早似野犬异豺化石 距今约195万年—1」背后的行业趋势与关键信号。", "interpretation": "追踪生物医药临床突破、医疗并购与公共卫生进展；不构成个人医疗建议。", "perspective": "信源来自 中新网社会，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "c80e5d1d139e52e7", "title": "粤港跨境医疗服务合作联盟成立，爱康助力打造粤港双向健康新通路", "original_title": "粤港跨境医疗服务合作联盟成立，爱康助力打造粤港双向健康新通路", "source": "中新网健康", "url": "https://www.chinanews.com.cn/jk/2026/11-04/10726005.shtml", "time": "3 小时前", "heat": "", "score": 40.97, "summary": "智慧鹏城，再添粤港跨境健康“新地标”。", "takeaway": "聚焦「粤港跨境医疗服务合作联盟成立，爱康助力打造粤港双向健康新」背后的行业趋势与关键信号。", "interpretation": "追踪生物医药临床突破、医疗并购与公共卫生进展；不构成个人医疗建议。", "perspective": "信源来自 中新网健康，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "c069c688554eff9e", "title": "第四届全国人工智能应用技术技能大赛湖北荆州开赛", "original_title": "第四届全国人工智能应用技术技能大赛湖北荆州开赛", "source": "中新网社会", "url": "https://www.chinanews.com.cn/sh/2026/11-04/10726202.shtml", "time": "刚刚", "heat": "", "score": 38.91, "summary": "中新网荆州11月4日电 (吴淘淘)第四届全国人工智能应用技术技能大赛4日在湖北荆州开幕。本届大赛由中国机械工业联合会、人力资源社会保障部、中华全国总工会共同主办，以“智赋新能、技创未来”为主题。赛程为期4天。", "takeaway": "聚焦「第四届全国人工智能应用技术技能大赛湖北荆州开赛」背后的行业趋势与关键信号。", "interpretation": "追踪生物医药临床突破、医疗并购与公共卫生进展；不构成个人医疗建议。", "perspective": "信源来自 中新网社会，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}]}, {"id": "global", "name": "外媒编译", "icon": "newspaper", "color": "#3F6E8C", "brief": "优先采用 BBC 中文、德国之声中文、联合早报等外媒官方中文版；网络不可达时自动降级为中新网等中文国际报道，全程不出现英文原文。本期共收录 6 条重点动态。", "items": [{"id": "15b0eb64d51fe681", "title": "华盛顿压力下 甲骨文取消与腾讯价值约70亿美元芯片租赁协议", "original_title": "华盛顿压力下 甲骨文取消与腾讯价值约70亿美元芯片租赁协议", "source": "法广华语", "url": "https://www.rfi.fr/cn/%E7%A7%91%E6%8A%80%E4%B8%8E%E6%96%87%E5%8C%96/20261104-%E5%8D%8E%E7%9B%9B%E9%A1%BF%E5%8E%8B%E5%8A%9B%E4%B8%8B-%E7%94%B2%E9%AA%A8%E6%96%87%E5%8F%96%E6%B6%88%E4%B8%8E%E8%85%BE%E8%AE%AF%E4%BB%B7%E5%80%BC%E7%BA%A670%E4%BA%BF%E7%BE%8E%E5%85%83%E7%9A%84%E8%8A%AF%E7%89%87%E7%A7%9F%E8%B5%81%E5%8D%8F%E8%AE%AE", "time": "2 小时前", "heat": "", "score": 47.42, "summary": "据英国《金融时报》报导，在特朗普政府的压力下，甲骨文公司取消了与腾讯签订的价值数十亿美元的芯片租赁合同，这表明为中国人工智能公司提供服务的美国云提供商所受压力日益加剧。由亿万富翁、特朗普支持者埃里森（Larry Ellison）领导的甲骨文与腾讯签署了一份为期五年的租约，以提供在东南亚众多数据中心使用多达10万枚先进人工智能芯片的权限。该合同价值估计为70亿美元，是腾讯最大的海外租赁交易。由于华盛顿和北京的限制，腾讯依照该合同本能够获得无法在中国使用的芯片权限。", "takeaway": "聚焦「华盛顿压力下 甲骨文取消与腾讯价值约70亿美元芯片租赁协」背后的行业趋势与关键信号。", "interpretation": "同一事件对照多家国外媒体的措辞与切入角度，只保留可核实的事实。", "perspective": "信源来自 法广华语，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "8059dd51bf9a8f4e", "title": "青藏高原发现全球最早似野犬异豺化石 距今约195万年—177万年", "original_title": "青藏高原发现全球最早似野犬异豺化石 距今约195万年—177万年", "source": "中新网社会", "url": "https://www.chinanews.com.cn/sh/2026/11-04/10726203.shtml", "time": "刚刚", "heat": "", "score": 46.93, "summary": "中新网北京11月4日电 (记者 孙自法)记者11月4日从中国科学院古脊椎动物与古人类研究所(古脊椎所)江左其杲副研究员团队获悉，该团队与中外合作者最近在青藏高原研究发现一件似野犬异豺下颌化石标本，距今约195万年—177万年，是目前所知全球最早的似野犬异豺化石。", "takeaway": "聚焦「青藏高原发现全球最早似野犬异豺化石 距今约195万年—1」背后的行业趋势与关键信号。", "interpretation": "同一事件对照多家国外媒体的措辞与切入角度，只保留可核实的事实。", "perspective": "信源来自 中新网社会，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "ceebfea9ff06f600", "title": "乌镇峰会聚焦推动智能体互信互联互操作", "original_title": "乌镇峰会聚焦推动智能体互信互联互操作", "source": "中新网财经", "url": "https://www.chinanews.com.cn/cj/2026/11-04/10726122.shtml", "time": "2 小时前", "heat": "", "score": 46.65, "summary": "中新网浙江乌镇11月4日电 (记者 刘亮)2026年世界互联网大会乌镇峰会“智能体互信互联互操作全球合作创新——携手构建智能互联网”分论坛4日在浙江乌镇举行，智能体信任治理成为与会各方关注的焦点。", "takeaway": "聚焦「乌镇峰会聚焦推动智能体互信互联互操作」背后的行业趋势与关键信号。", "interpretation": "同一事件对照多家国外媒体的措辞与切入角度，只保留可核实的事实。", "perspective": "信源来自 中新网财经，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "708dceefa96eff15", "title": "美国民众周二参加中期选举，这次选举被看作是针对特朗普的全民公投", "original_title": "美国民众周二参加中期选举，这次选举被看作是针对特朗普的全民公投", "source": "法广华语", "url": "https://www.rfi.fr/cn/%E6%94%BF%E6%B2%BB/20261103-%E7%BE%8E%E5%9B%BD%E6%B0%91%E4%BC%97%E5%91%A8%E4%BA%8C%E5%8F%82%E5%8A%A0%E4%B8%AD%E6%9C%9F%E9%80%89%E4%B8%BE-%E8%BF%99%E6%AC%A1%E9%80%89%E4%B8%BE%E8%A2%AB%E7%9C%8B%E4%BD%9C%E6%98%AF%E9%92%88%E5%AF%B9%E7%89%B9%E6%9C%97%E6%99%AE%E7%9A%84%E5%85%A8%E6%B0%91%E5%85%AC%E6%8A%95", "time": "13 小时前", "heat": "", "score": 46.44, "summary": "美国民众于周二参加了中期选举。此次选举被视为一场针对特朗普的全民公投；如果共和党失利，他们将失去对国会的控制权，特朗普剩下的两年总统任期也将受到重大制约。民调预测，受选民对总统支持率低迷、能源价格飙升以及与伊朗持续冲突的不满情绪推动，美国民主党有望在众议院赢得多数席位，甚至可能夺取参议院的控制权。", "takeaway": "聚焦「美国民众周二参加中期选举，这次选举被看作是针对特朗普的全」背后的行业趋势与关键信号。", "interpretation": "同一事件对照多家国外媒体的措辞与切入角度，只保留可核实的事实。", "perspective": "信源来自 法广华语，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "1232bf4b0b9fa19d", "title": "丰田“Celica”将32年来重回世界拉力锦标赛", "original_title": "丰田“Celica”将32年来重回世界拉力锦标赛", "source": "日经中文", "url": "http://cn.nikkei.com/industry/icar/64600-2026-11-04-14-10-56.html", "time": "刚刚", "heat": "", "score": 44.96, "summary": "丰田“Celica”将32年来重回世界拉力锦标赛", "takeaway": "聚焦「丰田“Celica”将32年来重回世界拉力锦标赛」背后的行业趋势与关键信号。", "interpretation": "同一事件对照多家国外媒体的措辞与切入角度，只保留可核实的事实。", "perspective": "信源来自 日经中文，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "6bbfc7fe41847b7c", "title": "三井化学计划收购光刻胶全球第二大企业JSR", "original_title": "三井化学计划收购光刻胶全球第二大企业JSR", "source": "日经中文", "url": "http://cn.nikkei.com/industry/manufacturing/64598-2026-11-04-14-05-53.html", "time": "刚刚", "heat": "", "score": 44.96, "summary": "三井化学计划收购光刻胶全球第二大企业JSR", "takeaway": "聚焦「三井化学计划收购光刻胶全球第二大企业JSR」背后的行业趋势与关键信号。", "interpretation": "同一事件对照多家国外媒体的措辞与切入角度，只保留可核实的事实。", "perspective": "信源来自 日经中文，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}]}, {"id": "sport", "name": "体育资讯", "icon": "sportscourt", "color": "#2E7D6B", "brief": "来自中新网体育等中文赛事报道，覆盖完赛结果、转会与赛程变化。本期共收录 5 条重点动态。", "items": [{"id": "5bc88ccc8d85f009", "title": "碧波竞逐金溪河 福建省运会青少年部赛艇2000米决赛将乐开桨", "original_title": "碧波竞逐金溪河 福建省运会青少年部赛艇2000米决赛将乐开桨", "source": "中新网体育", "url": "https://www.chinanews.com.cn/ty/2026/11-04/10725962.shtml", "time": "5 小时前", "heat": "", "score": 50.65, "summary": "中新网福建将乐11月4日电 (伍贤洪)福建省第十八届运动会青少年部赛艇比赛2000米决赛3日在将乐县常口村金溪河段开赛。经过前一日预赛角逐，各组别选手齐聚这条天然赛道，向着冠军发起冲刺。", "takeaway": "聚焦「碧波竞逐金溪河 福建省运会青少年部赛艇2000米决赛将乐」背后的行业趋势与关键信号。", "interpretation": "关注已完赛结果、转会与赛程变化，不做赛果预测。", "perspective": "信源来自 中新网体育，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "d63b8be8a50884f1", "title": "云南玉溪警方通报“球迷投掷鼓槌击中球员”：肇事球迷已被行拘", "original_title": "云南玉溪警方通报“球迷投掷鼓槌击中球员”：肇事球迷已被行拘", "source": "中新网社会", "url": "https://www.chinanews.com.cn/sh/2026/11-04/10726071.shtml", "time": "3 小时前", "heat": "", "score": 44.92, "summary": "中新网11月4日电 据“红塔警方”微信公众号消息，云南玉溪市公安局红塔分局4日发布警情通报称，11月1日，在中国足协杯半决赛云南玉昆对阵大连英博比赛期间，球迷钱某昆(男，52岁)将1支鼓棒投掷到球场区域，其行为违反《中华人民共和国治安管理处罚法》第二十八条之规定。11月2日，公安机关依法对钱某昆作出行政拘留七日，并处罚款500元的处罚，同时责令其六个月内不得进入体育场馆观看同类比赛。", "takeaway": "聚焦「云南玉溪警方通报“球迷投掷鼓槌击中球员”：肇事球迷已被行」背后的行业趋势与关键信号。", "interpretation": "关注已完赛结果、转会与赛程变化，不做赛果预测。", "perspective": "信源来自 中新网社会，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "7a76da1c6df439a5", "title": "WTT法兰克福冠军赛：王楚钦复出迎来“开门红”", "original_title": "WTT法兰克福冠军赛：王楚钦复出迎来“开门红”", "source": "中新网体育", "url": "https://www.chinanews.com.cn/ty/2026/11-04/10725779.shtml", "time": "10 小时前", "heat": "", "score": 44.6, "summary": "中新社德国法兰克福11月4日电 当地时间11月3日，2026年世界乒乓球职业大联盟(WTT)法兰克福冠军赛在德国开赛。中国选手王楚钦以3:0横扫丹麦选手林德，在复出后的首场比赛中取得“开门红”，顺利晋级男单16强。", "takeaway": "聚焦「WTT法兰克福冠军赛：王楚钦复出迎来“开门红”」背后的行业趋势与关键信号。", "interpretation": "关注已完赛结果、转会与赛程变化，不做赛果预测。", "perspective": "信源来自 中新网体育，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "07010bc8b4d21a12", "title": "尹锡悦违反选举法案二审亦获刑 或致当选无效", "original_title": "尹锡悦违反选举法案二审亦获刑 或致当选无效", "source": "中新网国际", "url": "https://www.chinanews.com.cn/gj/2026/11-04/10726191.shtml", "time": "刚刚", "heat": "", "score": 38.73, "summary": "中新网11月4日电 据韩联社当地时间4日报道，韩国前总统尹锡悦违反《公职选举法》案二审当日宣判，尹锡悦被判有期徒刑1年6个月，缓刑3年。", "takeaway": "聚焦「尹锡悦违反选举法案二审亦获刑 或致当选无效」背后的行业趋势与关键信号。", "interpretation": "关注已完赛结果、转会与赛程变化，不做赛果预测。", "perspective": "信源来自 中新网国际，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "8263fe5bdecffdfb", "title": "以色列中央选举委员会：议会选举不存在舞弊行为", "original_title": "以色列中央选举委员会：议会选举不存在舞弊行为", "source": "中新网国际", "url": "https://www.chinanews.com.cn/gj/2026/11-04/10726163.shtml", "time": "刚刚", "heat": "", "score": 38.63, "summary": "中新社北京11月4日电 耶路撒冷消息：当地时间11月4日，以色列中央选举委员会表示，该国日前举行的议会选举中不存在舞弊行为，选举的公正性也未受到损害。", "takeaway": "聚焦「以色列中央选举委员会：议会选举不存在舞弊行为」背后的行业趋势与关键信号。", "interpretation": "关注已完赛结果、转会与赛程变化，不做赛果预测。", "perspective": "信源来自 中新网国际，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}]}, {"id": "life", "name": "生活消费", "icon": "house", "color": "#B07A3C", "brief": "来自少数派、爱范儿、IT之家等中文生活与消费资讯，原始内容即为中文。本期共收录 5 条重点动态。", "items": [{"id": "980610322b0eccf6", "title": "2025 年我国新型显示行业全球市场占有率超五成，显示面板出货面积超 2.2 亿平方米", "original_title": "2025 年我国新型显示行业全球市场占有率超五成，显示面板出货面积超 2.2 亿平方米", "source": "IT之家", "url": "https://www.ithome.com/1/022/367.htm", "time": "1 小时前", "heat": "", "score": 50.99, "summary": "据央视新闻报道，中国电子信息产业发展研究院今天（11 月 4 日）发布的《2026 年新型显示产业发展报告》显示，我国新型显示产业实现跨越式发展，成为全球技术布局最全的显示面板生产基地。 中国光学光电子行业协会液晶分会常务副秘书长胡春明介绍，2025 年，我国新型显示行业产值规模达到 8386 亿元， 全球市场占有率超过 53% ，显示面板出货面积超过 2.2 亿平方米， 全球市场占比 77% 。 胡春明表示，2026 年全球消费电子市场进入由存储器件涨价带来的动荡期，但我国显示市场仍保持了增长态势。今年 6 月，我国首条、全球第二条第 8.6 代 AMOLED 生产线在成都量产，将大大带动目前在手机上已经普及的 OLED 屏幕向…", "takeaway": "聚焦「2025 年我国新型显示行业全球市场占有率超五成，显示面」背后的行业趋势与关键信号。", "interpretation": "挑选与日常出行、数码使用、居家消费直接相关的可操作信息。", "perspective": "信源来自 IT之家，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "1a2f7d09fde10fc3", "title": "3299 → 688 元再三降价：石头 A30 Max 智能洗地机 25000Pa 大吸力 + 180° 躺平", "original_title": "3299 → 688 元再三降价：石头 A30 Max 智能洗地机 25000Pa 大吸力 + 180° 躺平", "source": "IT之家", "url": "https://www.ithome.com/1/022/366.htm", "time": "1 小时前", "heat": "", "score": 50.98, "summary": "石头 A30 Max 智能洗地机官方定价 3299 元，今日按下方步骤下单，仅需 688 元即可入手： 点击下方卡片享智能单品补贴 915 元 + 闪电加补 90 元 + 可领 97.49 元淘礼金红包（每日 10~24 点可领）； App 商品价格下方可领 15% 政府补贴； 点击下方卡片可享淘金币抵扣 142.48 元（如果淘金币不够的话在商品详情页有借币教程）； * 88VIP 加入购物车后点击下方凑单 ↗ 可用满 3000-400 元专享消费券，到手仅需 1502 元左右。（非 88VIP 前往 领券中心 可领取不定额消费券，还可膨胀至更大额度） 下单前咨询客服备注，晒单再返至高 871 元（实付金额≥1530 元，返现…", "takeaway": "聚焦「3299 → 688 元再三降价：石头 A30 Max 」背后的行业趋势与关键信号。", "interpretation": "挑选与日常出行、数码使用、居家消费直接相关的可操作信息。", "perspective": "信源来自 IT之家，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "eb055d8a0900bd53", "title": "微诗：从诗入画、且唱且行，这款免费 app 把诗装进手机", "original_title": "微诗：从诗入画、且唱且行，这款免费 app 把诗装进手机", "source": "少数派", "url": "https://sspai.com/post/115819", "time": "5 小时前", "heat": "", "score": 41.69, "summary": "没有融资、没有收费，也没有什么商业计划。花这些钱，只是为了把一个自己喜欢了很多年的东西做成自己心里的样子。", "takeaway": "聚焦「微诗：从诗入画、且唱且行，这款免费 app 把诗装进手机」背后的行业趋势与关键信号。", "interpretation": "挑选与日常出行、数码使用、居家消费直接相关的可操作信息。", "perspective": "信源来自 少数派，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "492cd836a2439f30", "title": "截图≠铁证、语音不能单独作数！微信电子证据该如何留存？", "original_title": "截图≠铁证、语音不能单独作数！微信电子证据该如何留存？", "source": "中新网社会", "url": "https://www.chinanews.com.cn/sh/2026/11-04/10726011.shtml", "time": "4 小时前", "heat": "", "score": 41.39, "summary": "近年来，微信聊天、语音沟通、转账支付几乎成了人们日常交往、消费、交易、经济往来的重要方式。在人民法院处理各类民事纠纷过程中，微信电子证据的使用越来越多。", "takeaway": "聚焦「截图≠铁证、语音不能单独作数！微信电子证据该如何留存？」背后的行业趋势与关键信号。", "interpretation": "挑选与日常出行、数码使用、居家消费直接相关的可操作信息。", "perspective": "信源来自 中新网社会，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}, {"id": "f6bf56e951b36441", "title": "Anthropic微微发力，AI中转站的天就要塌了？", "original_title": "Anthropic微微发力，AI中转站的天就要塌了？", "source": "爱范儿", "url": "https://www.ifanr.com/1687702?utm_source=rss&utm_medium=rss&utm_campaign=", "time": "1 小时前", "heat": "", "score": 40.02, "summary": "就像发邮件加上数字签名一样", "takeaway": "聚焦「Anthropic微微发力，AI中转站的天就要塌了？」背后的行业趋势与关键信号。", "interpretation": "挑选与日常出行、数码使用、居家消费直接相关的可操作信息。", "perspective": "信源来自 爱范儿，建议结合国内外同类报道交叉核对关键数据与落地影响。", "tags": [], "audience": ""}]}], "hotlists": {"updated_at": "2026-11-04T20:09:18+08:00", "sources": [{"id": "weibo", "name": "微博热搜", "updated_at": "2026-11-04T20:09:17+08:00", "items": [{"title": "后会友期第二季呼声TOP10", "url": "https://s.weibo.com/weibo?q=%23%E5%90%8E%E4%BC%9A%E5%8F%8B%E6%9C%9F%E7%AC%AC%E4%BA%8C%E5%AD%A3%E5%91%BC%E5%A3%B0TOP10%23", "heat": "136.7万", "label": "新"}, {"title": "女子每月花3600住酒店上班", "url": "https://s.weibo.com/weibo?q=%23%E5%A5%B3%E5%AD%90%E6%AF%8F%E6%9C%88%E8%8A%B13600%E4%BD%8F%E9%85%92%E5%BA%97%E4%B8%8A%E7%8F%AD%23", "heat": "89.8万", "label": ""}, {"title": "进博会见证中国开放的大门越开越大", "url": "https://s.weibo.com/weibo?q=%23%E8%BF%9B%E5%8D%9A%E4%BC%9A%E8%A7%81%E8%AF%81%E4%B8%AD%E5%9B%BD%E5%BC%80%E6%94%BE%E7%9A%84%E5%A4%A7%E9%97%A8%E8%B6%8A%E5%BC%80%E8%B6%8A%E5%A4%A7%23", "heat": "72.1万", "label": "新"}, {"title": "嫁金钗忘删AI水印了", "url": "https://s.weibo.com/weibo?q=%E5%AB%81%E9%87%91%E9%92%97%E5%BF%98%E5%88%A0AI%E6%B0%B4%E5%8D%B0%E4%BA%86", "heat": "71.6万", "label": "热"}, {"title": "陕西发生重大刑案嫌疑人持刀在逃", "url": "https://s.weibo.com/weibo?q=%23%E9%99%95%E8%A5%BF%E5%8F%91%E7%94%9F%E9%87%8D%E5%A4%A7%E5%88%91%E6%A1%88%E5%AB%8C%E7%96%91%E4%BA%BA%E6%8C%81%E5%88%80%E5%9C%A8%E9%80%83%23", "heat": "70.2万", "label": "新"}, {"title": "亚洲大学排名揭晓", "url": "https://s.weibo.com/weibo?q=%E4%BA%9A%E6%B4%B2%E5%A4%A7%E5%AD%A6%E6%8E%92%E5%90%8D%E6%8F%AD%E6%99%93", "heat": "68.5万", "label": ""}, {"title": "张雪反问网友怎么还傲慢上了", "url": "https://s.weibo.com/weibo?q=%23%E5%BC%A0%E9%9B%AA%E5%8F%8D%E9%97%AE%E7%BD%91%E5%8F%8B%E6%80%8E%E4%B9%88%E8%BF%98%E5%82%B2%E6%85%A2%E4%B8%8A%E4%BA%86%23", "heat": "66.3万", "label": "新"}, {"title": "贺兰山失联22岁女孩已确认死亡", "url": "https://s.weibo.com/weibo?q=%23%E8%B4%BA%E5%85%B0%E5%B1%B1%E5%A4%B1%E8%81%9422%E5%B2%81%E5%A5%B3%E5%AD%A9%E5%B7%B2%E7%A1%AE%E8%AE%A4%E6%AD%BB%E4%BA%A1%23", "heat": "64.8万", "label": ""}, {"title": "卢昱晓笑到痛苦了林一还在加料", "url": "https://s.weibo.com/weibo?q=%23%E5%8D%A2%E6%98%B1%E6%99%93%E7%AC%91%E5%88%B0%E7%97%9B%E8%8B%A6%E4%BA%86%E6%9E%97%E4%B8%80%E8%BF%98%E5%9C%A8%E5%8A%A0%E6%96%99%23", "heat": "62.6万", "label": "新"}, {"title": "内存短缺或持续到2030年", "url": "https://s.weibo.com/weibo?q=%E5%86%85%E5%AD%98%E7%9F%AD%E7%BC%BA%E6%88%96%E6%8C%81%E7%BB%AD%E5%88%B02030%E5%B9%B4", "heat": "62.2万", "label": "新"}, {"title": "曝短剧顶流刘念涉嫌刑事犯罪遭调查", "url": "https://s.weibo.com/weibo?q=%E6%9B%9D%E7%9F%AD%E5%89%A7%E9%A1%B6%E6%B5%81%E5%88%98%E5%BF%B5%E6%B6%89%E5%AB%8C%E5%88%91%E4%BA%8B%E7%8A%AF%E7%BD%AA%E9%81%AD%E8%B0%83%E6%9F%A5", "heat": "60.6万", "label": "热"}, {"title": "这就是勤换洗水杯的原因", "url": "https://s.weibo.com/weibo?q=%E8%BF%99%E5%B0%B1%E6%98%AF%E5%8B%A4%E6%8D%A2%E6%B4%97%E6%B0%B4%E6%9D%AF%E7%9A%84%E5%8E%9F%E5%9B%A0", "heat": "58.1万", "label": ""}, {"title": "叶非夜实名举报郭宇欣偷税漏税", "url": "https://s.weibo.com/weibo?q=%23%E5%8F%B6%E9%9D%9E%E5%A4%9C%E5%AE%9E%E5%90%8D%E4%B8%BE%E6%8A%A5%E9%83%AD%E5%AE%87%E6%AC%A3%E5%81%B7%E7%A8%8E%E6%BC%8F%E7%A8%8E%23", "heat": "56.1万", "label": "新"}, {"title": "2027新剧推介会", "url": "https://s.weibo.com/weibo?q=2027%E6%96%B0%E5%89%A7%E6%8E%A8%E4%BB%8B%E4%BC%9A", "heat": "55.5万", "label": "新"}, {"title": "369彻底出圈", "url": "https://s.weibo.com/weibo?q=%23369%E5%BD%BB%E5%BA%95%E5%87%BA%E5%9C%88%23", "heat": "53.7万", "label": "新"}, {"title": "股市大反攻亏损全补回来", "url": "https://s.weibo.com/weibo?q=%E8%82%A1%E5%B8%82%E5%A4%A7%E5%8F%8D%E6%94%BB%E4%BA%8F%E6%8D%9F%E5%85%A8%E8%A1%A5%E5%9B%9E%E6%9D%A5", "heat": "52.5万", "label": ""}, {"title": "易烊千玺方辟谣恋情传闻", "url": "https://s.weibo.com/weibo?q=%23%E6%98%93%E7%83%8A%E5%8D%83%E7%8E%BA%E6%96%B9%E8%BE%9F%E8%B0%A3%E6%81%8B%E6%83%85%E4%BC%A0%E9%97%BB%23", "heat": "39.3万", "label": "新"}, {"title": "郭宇欣 张力壬", "url": "https://s.weibo.com/weibo?q=%E9%83%AD%E5%AE%87%E6%AC%A3%20%E5%BC%A0%E5%8A%9B%E5%A3%AC", "heat": "39.2万", "label": ""}, {"title": "天娱老员工打假厉娜告密者", "url": "https://s.weibo.com/weibo?q=%23%E5%A4%A9%E5%A8%B1%E8%80%81%E5%91%98%E5%B7%A5%E6%89%93%E5%81%87%E5%8E%89%E5%A8%9C%E5%91%8A%E5%AF%86%E8%80%85%23", "heat": "38.9万", "label": "新"}, {"title": "台湾观众追小城良方追到变了口音", "url": "https://s.weibo.com/weibo?q=%23%E5%8F%B0%E6%B9%BE%E8%A7%82%E4%BC%97%E8%BF%BD%E5%B0%8F%E5%9F%8E%E8%89%AF%E6%96%B9%E8%BF%BD%E5%88%B0%E5%8F%98%E4%BA%86%E5%8F%A3%E9%9F%B3%23", "heat": "37.9万", "label": "新"}]}, {"id": "zhihu", "name": "知乎热榜", "updated_at": "2026-11-04T20:09:17+08:00", "items": [{"title": "女子在公司吃早餐摔骨折花 2.5 万元治疗，不予认定工伤，人社部称只有午餐被纳入认定范围，这合理吗？", "url": "https://www.zhihu.com/question/2101045355492263432", "heat": "878万", "label": ""}, {"title": "苹果手机显示13日多地气温低至-30℃，这是怎么回事？是什么问题导致了这种bug？", "url": "https://www.zhihu.com/question/2101126085631009295", "heat": "411万", "label": ""}, {"title": "我请客的饭局席间一人感谢主赐他日用的饮食，我开玩笑说那这顿我不买单了，他为何会生气？", "url": "https://www.zhihu.com/question/406887759", "heat": "326万", "label": ""}, {"title": "《海贼王》路飞被曝解锁「黑色猿猴」新形态，如何评价这一设定？", "url": "https://www.zhihu.com/question/2101250269363319000", "heat": "242万", "label": ""}, {"title": "抖音副总裁李亮发文称「我真心认为秦朔不是蠢就是坏」，如何看待双方观点及指控？", "url": "https://www.zhihu.com/question/2101258456724402498", "heat": "234万", "label": ""}, {"title": "豆包用户数被红果超越，这说明了什么？普通人对 AI 的真实需求被高估了吗？", "url": "https://www.zhihu.com/question/2100943272122250679", "heat": "205万", "label": ""}, {"title": "儿子沉迷看电视，爸爸「魔改」电视系统，看 10 分钟抽查一道题，这招怎么样？对孩子管用吗？", "url": "https://www.zhihu.com/question/2101035704512005455", "heat": "200万", "label": ""}, {"title": "如何评价王小利、赵本山电视剧《走马上任》？", "url": "https://www.zhihu.com/question/2100667554176020533", "heat": "196万", "label": ""}, {"title": "《西游记》真假美猴王之后，唐僧再也没有念过紧箍咒，是孙悟空真的被换掉了吗？", "url": "https://www.zhihu.com/question/2098427617066103119", "heat": "195万", "label": ""}, {"title": "《英雄联盟》S16 首场八强赛决胜局遭遇超长暂停，现场发生了什么？", "url": "https://www.zhihu.com/question/2101252648439476700", "heat": "193万", "label": ""}, {"title": "如何评价《嫁金钗》中女主闯入太子府邸阉了太子的剧情？", "url": "https://www.zhihu.com/question/2100664306396304103", "heat": "187万", "label": ""}, {"title": "如何评价 369 在 S16 全球总决赛上的整体表现？", "url": "https://www.zhihu.com/question/2101266705678694183", "heat": "177万", "label": ""}, {"title": "上汽奥迪因发布「AUDI 全系买一赠一」文案实为赠车模被立案调查，这种营销方式可能会面临哪些处罚？", "url": "https://www.zhihu.com/question/2101019662498714789", "heat": "177万", "label": ""}, {"title": "假设一个人以近光速跑百米，大家看他到底是快还是慢？", "url": "https://www.zhihu.com/question/465351333", "heat": "176万", "label": ""}, {"title": "如何看待华为云宣布下线盘古2.0 Flash、Pro模型服务？", "url": "https://www.zhihu.com/question/2100911175315763298", "heat": "176万", "label": ""}, {"title": "网传DeepSeek V5 已经做出来了但官方未发布，是真的吗？可能什么时候发布？", "url": "https://www.zhihu.com/question/2099896271318397900", "heat": "176万", "label": ""}, {"title": "如何看待券商投行称 IPO 已经实质暂停，直至市场恢复稳定，上市公司的大笔减持也被同步叫停？", "url": "https://www.zhihu.com/question/2101251200125329978", "heat": "176万", "label": ""}, {"title": "影之刃零里面的设定感觉都好中二，比方说“组织”，有人能给我深度拆解一下影之刃系列的世界观与剧情吗？", "url": "https://www.zhihu.com/question/2098861847625610079", "heat": "155万", "label": ""}, {"title": "现在的年轻人为什么不爱社交了？", "url": "https://www.zhihu.com/question/2072650993444065643", "heat": "138万", "label": ""}, {"title": "如何评价腾讯混元 11 月 4 日发布的Hy4 正式版？实际体验如何？", "url": "https://www.zhihu.com/question/2101297627354456984", "heat": "136万", "label": ""}]}, {"id": "douyin", "name": "抖音热点", "updated_at": "2026-11-04T20:09:17+08:00", "items": [{"title": "原来深秋是咕嘟的", "url": "https://www.douyin.com/search/%E5%8E%9F%E6%9D%A5%E6%B7%B1%E7%A7%8B%E6%98%AF%E5%92%95%E5%98%9F%E7%9A%84", "heat": "1163.8万", "label": "爆"}, {"title": "这泰山是非爬不可吗", "url": "https://www.douyin.com/search/%E8%BF%99%E6%B3%B0%E5%B1%B1%E6%98%AF%E9%9D%9E%E7%88%AC%E4%B8%8D%E5%8F%AF%E5%90%97", "heat": "1145.0万", "label": "爆"}, {"title": "多部门部署加强消费基础设施建设", "url": "https://www.douyin.com/search/%E5%A4%9A%E9%83%A8%E9%97%A8%E9%83%A8%E7%BD%B2%E5%8A%A0%E5%BC%BA%E6%B6%88%E8%B4%B9%E5%9F%BA%E7%A1%80%E8%AE%BE%E6%96%BD%E5%BB%BA%E8%AE%BE", "heat": "1126.7万", "label": "新"}, {"title": "A股收盘：科创50大涨近10%", "url": "https://www.douyin.com/search/A%E8%82%A1%E6%94%B6%E7%9B%98%EF%BC%9A%E7%A7%91%E5%88%9B50%E5%A4%A7%E6%B6%A8%E8%BF%9110%25", "heat": "1119.4万", "label": "爆"}, {"title": "男生秋冬简约穿搭攻略", "url": "https://www.douyin.com/search/%E7%94%B7%E7%94%9F%E7%A7%8B%E5%86%AC%E7%AE%80%E7%BA%A6%E7%A9%BF%E6%90%AD%E6%94%BB%E7%95%A5", "heat": "1052.8万", "label": "爆"}, {"title": "外交部：就中俄美元首会晤保持沟通", "url": "https://www.douyin.com/search/%E5%A4%96%E4%BA%A4%E9%83%A8%EF%BC%9A%E5%B0%B1%E4%B8%AD%E4%BF%84%E7%BE%8E%E5%85%83%E9%A6%96%E4%BC%9A%E6%99%A4%E4%BF%9D%E6%8C%81%E6%B2%9F%E9%80%9A", "heat": "1040.2万", "label": "爆"}, {"title": "北京周末有明显雨雪天气", "url": "https://www.douyin.com/search/%E5%8C%97%E4%BA%AC%E5%91%A8%E6%9C%AB%E6%9C%89%E6%98%8E%E6%98%BE%E9%9B%A8%E9%9B%AA%E5%A4%A9%E6%B0%94", "heat": "929.6万", "label": ""}, {"title": "盛李豪射击世锦赛夺金实现全满贯", "url": "https://www.douyin.com/search/%E7%9B%9B%E6%9D%8E%E8%B1%AA%E5%B0%84%E5%87%BB%E4%B8%96%E9%94%A6%E8%B5%9B%E5%A4%BA%E9%87%91%E5%AE%9E%E7%8E%B0%E5%85%A8%E6%BB%A1%E8%B4%AF", "heat": "926.3万", "label": "爆"}, {"title": "深度复盘IG战胜TES", "url": "https://www.douyin.com/search/%E6%B7%B1%E5%BA%A6%E5%A4%8D%E7%9B%98IG%E6%88%98%E8%83%9CTES", "heat": "917.1万", "label": "爆"}, {"title": "剧好看2027新剧推介会直播", "url": "https://www.douyin.com/search/%E5%89%A7%E5%A5%BD%E7%9C%8B2027%E6%96%B0%E5%89%A7%E6%8E%A8%E4%BB%8B%E4%BC%9A%E7%9B%B4%E6%92%AD", "heat": "917.0万", "label": ""}, {"title": "2026中国广播电视精品创作大会", "url": "https://www.douyin.com/search/2026%E4%B8%AD%E5%9B%BD%E5%B9%BF%E6%92%AD%E7%94%B5%E8%A7%86%E7%B2%BE%E5%93%81%E5%88%9B%E4%BD%9C%E5%A4%A7%E4%BC%9A", "heat": "916.4万", "label": "爆"}, {"title": "画地为牢是什么意思", "url": "https://www.douyin.com/search/%E7%94%BB%E5%9C%B0%E4%B8%BA%E7%89%A2%E6%98%AF%E4%BB%80%E4%B9%88%E6%84%8F%E6%80%9D", "heat": "913.3万", "label": "爆", "prev_rank": 9}, {"title": "气象部门回应iPhone天气异常数据", "url": "https://www.douyin.com/search/%E6%B0%94%E8%B1%A1%E9%83%A8%E9%97%A8%E5%9B%9E%E5%BA%94iPhone%E5%A4%A9%E6%B0%94%E5%BC%82%E5%B8%B8%E6%95%B0%E6%8D%AE", "heat": "912.3万", "label": ""}, {"title": "曼联3:2逆转罗马", "url": "https://www.douyin.com/search/%E6%9B%BC%E8%81%943%3A2%E9%80%86%E8%BD%AC%E7%BD%97%E9%A9%AC", "heat": "910.9万", "label": ""}, {"title": "金价回落消费者趁机购金", "url": "https://www.douyin.com/search/%E9%87%91%E4%BB%B7%E5%9B%9E%E8%90%BD%E6%B6%88%E8%B4%B9%E8%80%85%E8%B6%81%E6%9C%BA%E8%B4%AD%E9%87%91", "heat": "910.5万", "label": "爆"}, {"title": "库珀赛后“表白”赵继伟", "url": "https://www.douyin.com/search/%E5%BA%93%E7%8F%80%E8%B5%9B%E5%90%8E%E2%80%9C%E8%A1%A8%E7%99%BD%E2%80%9D%E8%B5%B5%E7%BB%A7%E4%BC%9F", "heat": "904.8万", "label": "爆"}, {"title": "CBA广州93:100不敌辽宁", "url": "https://www.douyin.com/search/CBA%E5%B9%BF%E5%B7%9E93%3A100%E4%B8%8D%E6%95%8C%E8%BE%BD%E5%AE%81", "heat": "893.7万", "label": "爆"}, {"title": "小蓝叔对口型演绎大赏", "url": "https://www.douyin.com/search/%E5%B0%8F%E8%93%9D%E5%8F%94%E5%AF%B9%E5%8F%A3%E5%9E%8B%E6%BC%94%E7%BB%8E%E5%A4%A7%E8%B5%8F", "heat": "849.5万", "label": "", "prev_rank": 17}, {"title": "中印尼利刃2026联训在广州结训", "url": "https://www.douyin.com/search/%E4%B8%AD%E5%8D%B0%E5%B0%BC%E5%88%A9%E5%88%832026%E8%81%94%E8%AE%AD%E5%9C%A8%E5%B9%BF%E5%B7%9E%E7%BB%93%E8%AE%AD", "heat": "841.6万", "label": "爆"}, {"title": "妈妈的话是家里的圣旨", "url": "https://www.douyin.com/search/%E5%A6%88%E5%A6%88%E7%9A%84%E8%AF%9D%E6%98%AF%E5%AE%B6%E9%87%8C%E7%9A%84%E5%9C%A3%E6%97%A8", "heat": "825.3万", "label": "爆"}]}, {"id": "baidu", "name": "百度热搜", "updated_at": "2026-11-04T20:09:18+08:00", "items": [{"title": "“做强做优做大实体经济”", "url": "https://m.baidu.com/s?word=%E2%80%9C%E5%81%9A%E5%BC%BA%E5%81%9A%E4%BC%98%E5%81%9A%E5%A4%A7%E5%AE%9E%E4%BD%93%E7%BB%8F%E6%B5%8E%E2%80%9D&sa=fyb_news", "heat": "", "label": ""}, {"title": "A股大反攻原因找到了", "url": "https://m.baidu.com/s?word=A%E8%82%A1%E5%A4%A7%E5%8F%8D%E6%94%BB%E5%8E%9F%E5%9B%A0%E6%89%BE%E5%88%B0%E4%BA%86&sa=fyb_news", "heat": "", "label": ""}, {"title": "长时间刷手机 大脑里发生了什么", "url": "https://m.baidu.com/s?word=%E9%95%BF%E6%97%B6%E9%97%B4%E5%88%B7%E6%89%8B%E6%9C%BA+%E5%A4%A7%E8%84%91%E9%87%8C%E5%8F%91%E7%94%9F%E4%BA%86%E4%BB%80%E4%B9%88&sa=fyb_news", "heat": "", "label": ""}, {"title": "中国智能经济新形态加速崛起", "url": "https://m.baidu.com/s?word=%E4%B8%AD%E5%9B%BD%E6%99%BA%E8%83%BD%E7%BB%8F%E6%B5%8E%E6%96%B0%E5%BD%A2%E6%80%81%E5%8A%A0%E9%80%9F%E5%B4%9B%E8%B5%B7&sa=fyb_news", "heat": "", "label": ""}, {"title": "钟薛高回应一支雪糕13元", "url": "https://m.baidu.com/s?word=%E9%92%9F%E8%96%9B%E9%AB%98%E5%9B%9E%E5%BA%94%E4%B8%80%E6%94%AF%E9%9B%AA%E7%B3%9513%E5%85%83&sa=fyb_news", "heat": "", "label": ""}, {"title": "“未婚妻、病床都是假的 转账是真的”", "url": "https://m.baidu.com/s?word=%E2%80%9C%E6%9C%AA%E5%A9%9A%E5%A6%BB%E3%80%81%E7%97%85%E5%BA%8A%E9%83%BD%E6%98%AF%E5%81%87%E7%9A%84+%E8%BD%AC%E8%B4%A6%E6%98%AF%E7%9C%9F%E7%9A%84%E2%80%9D&sa=fyb_news", "heat": "", "label": ""}, {"title": "51岁阿姨参加健美比赛 体脂率12%", "url": "https://m.baidu.com/s?word=51%E5%B2%81%E9%98%BF%E5%A7%A8%E5%8F%82%E5%8A%A0%E5%81%A5%E7%BE%8E%E6%AF%94%E8%B5%9B+%E4%BD%93%E8%84%82%E7%8E%8712%25&sa=fyb_news", "heat": "", "label": ""}, {"title": "全球银行实力榜前10中国占两席", "url": "https://m.baidu.com/s?word=%E5%85%A8%E7%90%83%E9%93%B6%E8%A1%8C%E5%AE%9E%E5%8A%9B%E6%A6%9C%E5%89%8D10%E4%B8%AD%E5%9B%BD%E5%8D%A0%E4%B8%A4%E5%B8%AD&sa=fyb_news", "heat": "", "label": ""}, {"title": "女子点一杯饮品入座 店家称需点两杯", "url": "https://m.baidu.com/s?word=%E5%A5%B3%E5%AD%90%E7%82%B9%E4%B8%80%E6%9D%AF%E9%A5%AE%E5%93%81%E5%85%A5%E5%BA%A7+%E5%BA%97%E5%AE%B6%E7%A7%B0%E9%9C%80%E7%82%B9%E4%B8%A4%E6%9D%AF&sa=fyb_news", "heat": "", "label": ""}, {"title": "A股大反弹“群里又恢复了欢声笑语”", "url": "https://m.baidu.com/s?word=A%E8%82%A1%E5%A4%A7%E5%8F%8D%E5%BC%B9%E2%80%9C%E7%BE%A4%E9%87%8C%E5%8F%88%E6%81%A2%E5%A4%8D%E4%BA%86%E6%AC%A2%E5%A3%B0%E7%AC%91%E8%AF%AD%E2%80%9D&sa=fyb_news", "heat": "", "label": ""}, {"title": "三甲医院医生推荐患者去三乙医院", "url": "https://m.baidu.com/s?word=%E4%B8%89%E7%94%B2%E5%8C%BB%E9%99%A2%E5%8C%BB%E7%94%9F%E6%8E%A8%E8%8D%90%E6%82%A3%E8%80%85%E5%8E%BB%E4%B8%89%E4%B9%99%E5%8C%BB%E9%99%A2&sa=fyb_news", "heat": "", "label": ""}, {"title": "气象部门辟谣多地气温-32℃", "url": "https://m.baidu.com/s?word=%E6%B0%94%E8%B1%A1%E9%83%A8%E9%97%A8%E8%BE%9F%E8%B0%A3%E5%A4%9A%E5%9C%B0%E6%B0%94%E6%B8%A9-32%E2%84%83&sa=fyb_news", "heat": "", "label": ""}, {"title": "贺兰山失联22岁女孩确认死亡", "url": "https://m.baidu.com/s?word=%E8%B4%BA%E5%85%B0%E5%B1%B1%E5%A4%B1%E8%81%9422%E5%B2%81%E5%A5%B3%E5%AD%A9%E7%A1%AE%E8%AE%A4%E6%AD%BB%E4%BA%A1&sa=fyb_news", "heat": "", "label": ""}, {"title": "中方就中俄美元首会晤保持着沟通", "url": "https://m.baidu.com/s?word=%E4%B8%AD%E6%96%B9%E5%B0%B1%E4%B8%AD%E4%BF%84%E7%BE%8E%E5%85%83%E9%A6%96%E4%BC%9A%E6%99%A4%E4%BF%9D%E6%8C%81%E7%9D%80%E6%B2%9F%E9%80%9A&sa=fyb_news", "heat": "", "label": ""}, {"title": "老伯遗失绑有1500万购房款的手机", "url": "https://m.baidu.com/s?word=%E8%80%81%E4%BC%AF%E9%81%97%E5%A4%B1%E7%BB%91%E6%9C%891500%E4%B8%87%E8%B4%AD%E6%88%BF%E6%AC%BE%E7%9A%84%E6%89%8B%E6%9C%BA&sa=fyb_news", "heat": "", "label": ""}, {"title": "男子诈骗被抓后因无法考公崩溃", "url": "https://m.baidu.com/s?word=%E7%94%B7%E5%AD%90%E8%AF%88%E9%AA%97%E8%A2%AB%E6%8A%93%E5%90%8E%E5%9B%A0%E6%97%A0%E6%B3%95%E8%80%83%E5%85%AC%E5%B4%A9%E6%BA%83&sa=fyb_news", "heat": "", "label": ""}, {"title": "沈阳保洁大叔称儿子长相随妈", "url": "https://m.baidu.com/s?word=%E6%B2%88%E9%98%B3%E4%BF%9D%E6%B4%81%E5%A4%A7%E5%8F%94%E7%A7%B0%E5%84%BF%E5%AD%90%E9%95%BF%E7%9B%B8%E9%9A%8F%E5%A6%88&sa=fyb_news", "heat": "", "label": ""}, {"title": "失散20年双胞胎姐妹刷短视频相认", "url": "https://m.baidu.com/s?word=%E5%A4%B1%E6%95%A320%E5%B9%B4%E5%8F%8C%E8%83%9E%E8%83%8E%E5%A7%90%E5%A6%B9%E5%88%B7%E7%9F%AD%E8%A7%86%E9%A2%91%E7%9B%B8%E8%AE%A4&sa=fyb_news", "heat": "", "label": ""}, {"title": "上海飞泰国曼谷一客机因风挡破裂返航", "url": "https://m.baidu.com/s?word=%E4%B8%8A%E6%B5%B7%E9%A3%9E%E6%B3%B0%E5%9B%BD%E6%9B%BC%E8%B0%B7%E4%B8%80%E5%AE%A2%E6%9C%BA%E5%9B%A0%E9%A3%8E%E6%8C%A1%E7%A0%B4%E8%A3%82%E8%BF%94%E8%88%AA&sa=fyb_news", "heat": "", "label": ""}, {"title": "中国外交又干了件大事", "url": "https://m.baidu.com/s?word=%E4%B8%AD%E5%9B%BD%E5%A4%96%E4%BA%A4%E5%8F%88%E5%B9%B2%E4%BA%86%E4%BB%B6%E5%A4%A7%E4%BA%8B&sa=fyb_news", "heat": "", "label": ""}]}]}, "sports": {"updated_at": "2026-11-04T20:09:19+08:00", "nba": {"updated_at": "2026-11-04T20:09:19+08:00", "games": [{"away": "76人", "home": "活塞", "away_score": 0, "home_score": 0, "state": "pre", "start_text": "11月5日 08:00"}, {"away": "老鹰", "home": "奇才", "away_score": 0, "home_score": 0, "state": "pre", "start_text": "11月5日 08:00"}, {"away": "雄鹿", "home": "凯尔特人", "away_score": 0, "home_score": 0, "state": "pre", "start_text": "11月5日 08:30"}, {"away": "黄蜂", "home": "篮网", "away_score": 0, "home_score": 0, "state": "pre", "start_text": "11月5日 08:30"}, {"away": "公牛", "home": "尼克斯", "away_score": 0, "home_score": 0, "state": "pre", "start_text": "11月5日 08:30"}, {"away": "步行者", "home": "灰熊", "away_score": 0, "home_score": 0, "state": "pre", "start_text": "11月5日 09:00"}]}}}</script>
+<script type="application/json" id="config-data">{"city": "杭州富阳", "skin": "ink", "issue": 15, "enabled": ["wire", "global", "policy", "economy", "games", "ai", "infogap", "sport", "life", "health", "opensource"], "catalog": [{"id": "wire", "name": "环球通讯社", "group": "要闻", "color": "#4C7A8C"}, {"id": "global", "name": "外媒编译", "group": "要闻", "color": "#3F6E8C"}, {"id": "policy", "name": "政策解读", "group": "要闻", "color": "#2C4A7C"}, {"id": "economy", "name": "财经观察", "group": "要闻", "color": "#82623C"}, {"id": "infogap", "name": "信息差", "group": "科技", "color": "#506D7B"}, {"id": "ai", "name": "人工智能", "group": "科技", "color": "#7C5CFF"}, {"id": "opensource", "name": "开源项目", "group": "科技", "color": "#22A06B"}, {"id": "sport", "name": "体育资讯", "group": "生活", "color": "#2E7D6B"}, {"id": "life", "name": "生活消费", "group": "生活", "color": "#B07A3C"}, {"id": "health", "name": "健康生活", "group": "生活", "color": "#D65050"}, {"id": "games", "name": "游戏资讯", "group": "兴趣", "color": "#776493"}, {"id": "design", "name": "设计灵感", "group": "兴趣", "color": "#D95B8A"}, {"id": "media", "name": "新媒动态", "group": "兴趣", "color": "#1F9D9B"}]}</script>
+<script type="application/json" id="chapters-data">[{"title": "开场", "start": 0.0}, {"title": "今日重点", "start": 14.304}, {"title": "热点背景", "start": 65.856}, {"title": "环球通讯社", "start": 183.408}, {"title": "外媒编译", "start": 238.68}, {"title": "政策解读", "start": 348.648}, {"title": "财经观察", "start": 374.448}, {"title": "人工智能", "start": 471.744}, {"title": "收尾", "start": 498.624}]</script>
+<script>
+(function(){
+  "use strict";
+  const DATA = JSON.parse(document.getElementById('digest-data').textContent);
+  const CFG  = JSON.parse(document.getElementById('config-data').textContent);
+  const CHAPTERS = JSON.parse(document.getElementById('chapters-data').textContent);
+  const audio = document.getElementById('briefAudio');
+
+  const SKINS = {
+    ink:{name:'晨报纸白',light:['F1EDE4','FEFDF9','EAE6DC','1C2B33','59666B','69777A','B7503A','DDD8CB','183D4D'],
+                dark:['101214','1B1D1F','15191C','EDF0EE','B0B8B9','A5AFB0','E89A83','383D40','214F63']},
+    paper:{name:'极简冷白',light:['F5F6F7','FFFFFF','EDEFF1','1B2430','5A6572','74808C','2F6F9E','DDE2E7','1B3A52'],
+                dark:['141618','1E2124','171A1D','ECEFF2','AEB8C2','98A3AD','7FB6DC','363C42','244C68']},
+    midnight:{name:'深夜蓝',light:['E8EDF3','F7FAFD','DCE5EF','16283A','4E6478','62788C','C07A4A','CBD7E3','122C42'],
+                dark:['0B1420','121E2C','0E1A28','E4ECF5','A9BDD0','93A9BE','E8B183','2A3B4C','1B3E59']},
+    sage:{name:'青瓷',light:['EEF1EA','FBFCF8','E5EBE1','1D2C25','566B5D','6B8072','3E7A5E','D6DFD3','1B4034'],
+                dark:['101814','1A221D','141C17','E8F0E9','AFC3B5','A0B7A6','8FC7A4','334138','245442']},
+    clay:{name:'赤陶',light:['F4EDE7','FEFAF6','EEE3DA','30241F','6E5649','836A5C','B7503A','E3D5C8','4A2E26'],
+                dark:['1C1513','241B18','1A1311','F2E9E2','C5A99A','B99C8C','E89A83','403029','5C3A2E']}
+  };
+  const KEYS=['canvas','paper','sidebar','ink','secondary','muted','accent','rule','navy'];
+  const state={
+    view:'overview', category:null, query:'',
+    skin:localStorage.getItem('pd-skin')||CFG.skin||'ink',
+    mode:localStorage.getItem('pd-mode')||'system',
+    expanded:false
+  };
+  const prefersDark=window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches;
+  function resolvedMode(){return state.mode==='system'?(prefersDark?'dark':'light'):state.mode}
+  function isDark(){return resolvedMode()==='dark'}
+  function hex(v){return '#'+v}
+  function lighten(hexval,k){
+    const n=parseInt(hexval.replace('#',''),16);
+    const r=Math.min(255,((n>>16)&255)+k),g=Math.min(255,((n>>8)&255)+k),b=Math.min(255,(n&255)+k);
+    return '#'+[r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');
+  }
+  function applyTheme(){
+    const dark=isDark(), p=SKINS[state.skin]||SKINS.ink, values=dark?p.dark:p.light, root=document.documentElement.style;
+    KEYS.forEach((k,i)=>root.setProperty('--'+k,hex(values[i])));
+    root.setProperty('--line',dark?'rgba(255,255,255,.10)':'rgba(0,0,0,.08)');
+    root.setProperty('--hair',dark?'rgba(255,255,255,.07)':'rgba(0,0,0,.06)');
+    root.setProperty('--sheen',dark?'rgba(255,255,255,.055)':'rgba(255,255,255,.85)');
+    root.setProperty('--shadow',dark?'0 3px 9px rgba(0,0,0,.30)':'0 3px 9px rgba(0,0,0,.07)');
+    root.setProperty('--shadowHover',dark?'0 12px 26px rgba(0,0,0,.42)':'0 12px 26px rgba(0,0,0,.13)');
+    root.setProperty('--whiteInk','#F5F3EB');
+    const sel=document.getElementById('skinSelect');
+    if(sel){sel.value=state.skin}
+    const btn=document.getElementById('modeBtn');
+    if(btn){btn.textContent=state.mode==='system'?'◐':(state.mode==='dark'?'☾':'☀')}
+  }
+  function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+  function catColor(id){
+    const entry=(CFG.catalog||[]).find(x=>x.id===id);
+    const base=entry&&entry.color?entry.color:'#6B7C86';
+    return isDark()?lighten(base,58):base;
+  }
+  function groupOf(id){
+    const entry=(CFG.catalog||[]).find(x=>x.id===id);
+    return entry&&entry.group?entry.group:'资讯';
+  }
+  function orderedCats(){
+    const map={};(DATA.categories||[]).forEach(c=>map[c.id]=c);
+    const ids=(CFG.enabled||[]).filter(id=>map[id]);
+    (DATA.categories||[]).forEach(c=>{if(!ids.includes(c.id))ids.push(c.id)});
+    return ids.map(id=>map[id]);
+  }
+  const cats=orderedCats();
+  const total=(DATA.categories||[]).reduce((n,c)=>n+(c.items||[]).length,0);
+
+  function renderSidebar(){
+    const sel=document.getElementById('skinSelect');
+    sel.innerHTML=Object.keys(SKINS).map(k=>'<option value="'+k+'">'+SKINS[k].name+'</option>').join('');
+    sel.value=state.skin;
+    const groups={};
+    cats.forEach(c=>{const g=groupOf(c.id);(groups[g]=groups[g]||[]).push(c)});
+    const order=['要闻','科技','生活','兴趣','资讯'];
+    const names=Object.keys(groups).sort((a,b)=>{
+      const ia=order.indexOf(a),ib=order.indexOf(b);
+      return (ia<0?99:ia)-(ib<0?99:ib);
+    });
+    let html='<div class="nav '+(state.view==='overview'?'active':'')+'" data-action="overview"><span class="dot" style="background:var(--accent)"></span>今日速览<span class="go">›</span></div>';
+    names.forEach(g=>{
+      html+='<div class="group">'+esc(g)+'</div>';
+      groups[g].forEach(c=>{
+        const on=state.view==='category'&&state.category===c.id;
+        html+='<div class="nav '+(on?'active':'')+'" data-action="category" data-id="'+esc(c.id)+'">'+
+              '<span class="dot" style="background:'+catColor(c.id)+'"></span>'+esc(c.name)+
+              '<span class="go">'+(c.items||[]).length+'</span></div>';
+      });
+    });
+    document.getElementById('navGroups').innerHTML=html;
+    document.getElementById('sideFoot').innerHTML='数据日期 '+esc(DATA.date||'')+'<br>共 '+total+' 条中文资讯<br>Windows 离线版 · 2026-11-04 20:52';
+  }
+
+  function masthead(){
+    const d=DATA.date||'', parts=d.split('-');
+    const dateText=parts.length===3?(Number(parts[1])+'月'+Number(parts[2])+'日'):d;
+    const weekdays=['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+    let week='';
+    if(parts.length===3){const dt=new Date(Number(parts[0]),Number(parts[1])-1,Number(parts[2]));week=weekdays[dt.getDay()]}
+    const gen=(DATA.generated_at||'').slice(11,16);
+    return '<div class="masthead"><div class="row1">'+
+      '<span class="date">'+esc(dateText)+'</span><span class="week">'+esc(week)+'</span>'+
+      (CFG.city?'<span class="city">· '+esc(CFG.city)+'</span>':'')+
+      '<div class="top-actions">'+
+        '<input class="search" id="searchInput" type="search" placeholder="搜索全部栏目" value="'+esc(state.query)+'">'+
+        '<button class="pill" data-action="speak">◖ 朗读提要</button>'+
+      '</div></div>'+
+      '<div class="meta">第 '+esc(CFG.issue||'—')+' 期 · 共 '+total+' 条 · '+cats.length+' 个栏目'+
+        (gen?' · 更新于 '+esc(gen):'')+'</div>'+
+      '<div class="mast-rule"></div>'+
+      (function(){
+        const stories=(DATA.brief&&DATA.brief.deep_stories)||[];
+        let lead=stories.length&&stories[0].title?stories[0].title:'';
+        if(!lead&&DATA.brief&&DATA.brief.points&&DATA.brief.points.length){lead=DATA.brief.points[0].text.split('——')[0]}
+        if(!lead)lead=(DATA.brief&&DATA.brief.headline)||'';
+        return lead?'<div class="lead"><div class="lead-bar"></div><div><div class="lead-kicker">● 今日提要</div><p class="lead-text">'+esc(lead)+'</p></div></div>':'';
+      })()+'</div>';
+  }
+
+  function radio(){
+    const ch=(CHAPTERS||[]).map((c,i)=>'<button class="chapter" data-action="chapter" data-start="'+c.start+'" data-index="'+i+'">'+esc(c.title)+'</button>').join('');
+    const hasAudio=!!audio.getAttribute('src')&&audio.getAttribute('src')!=='__NONE__';
+    return '<div class="radio"><div class="radio-top">'+
+      '<button class="play" id="playBtn" data-action="play">'+(audio.paused?'▶':'❚❚')+'</button>'+
+      '<div><div class="radio-title" id="radioTitle">今日播报 · 共 '+(CHAPTERS||[]).length+' 章</div>'+
+      '<div class="radio-sub">'+(hasAudio?'已内置当天中文语音，点击播放':'未找到音频文件，可用浏览器语音朗读')+'</div></div></div>'+
+      '<div class="radio-progress"><i id="radioBar"></i></div>'+
+      '<div class="chapters">'+ch+'</div></div>';
+  }
+
+  function tiles(){
+    const shown=state.expanded?cats:cats.slice(0,6);
+    const chips=cats.map(c=>'<div class="chip" data-action="category" data-id="'+esc(c.id)+'"><i style="background:'+catColor(c.id)+'"></i>'+esc(c.name)+'</div>').join('');
+    const cards=shown.map(c=>{
+      const color=catColor(c.id);
+      const items=(c.items||[]).slice(0,3).map((it,i)=>
+        '<div class="tile-line"><span class="no" style="color:'+color+'">'+String(i+1).padStart(2,'0')+'</span><span>'+esc(it.title)+'</span></div>').join('');
+      return '<div class="tile" data-action="category" data-id="'+esc(c.id)+'">'+
+        '<div class="tile-head"><div class="tile-mark" style="background:'+color+'22;color:'+color+'">'+esc(c.name.slice(0,1))+'</div>'+
+        '<div><div class="tile-name">'+esc(c.name)+'</div><div class="tile-group">'+esc(groupOf(c.id))+'</div></div>'+
+        '<span class="count" style="background:'+color+'22;color:'+color+'">'+(c.items||[]).length+' 条</span></div>'+
+        '<div class="tile-rule"></div>'+(items||'<div class="tile-line"><span>今天这个栏目还没有新条目</span></div>')+'</div>';
+    }).join('');
+    return '<div class="section"><div class="section-head"><span class="bar"></span><h2>今日栏目</h2>'+
+      '<span class="meta-r">'+cats.length+' 个模块 · '+total+' 条中文资讯</span>'+
+      '<span class="link" data-action="skinNext">换一套皮肤 ›</span></div><div class="section-rule"></div>'+
+      '<div class="chips">'+chips+'</div><div class="grid">'+cards+'</div>'+
+      (cats.length>6?'<button class="more" data-action="expand">'+(state.expanded?'收起栏目':'展开全部 '+cats.length+' 个栏目')+'</button>':'')+'</div>';
+  }
+
+  function briefCard(){
+    const points=(DATA.brief&&DATA.brief.points)||[];
+    if(!points.length)return '';
+    const rows=points.slice(0,9).map((p,i)=>{
+      const text=String(p.text||''), cut=text.indexOf('——');
+      const title=cut>0?text.slice(0,cut):text.slice(0,46);
+      const detail=cut>0?text.slice(cut+2):'';
+      return '<div class="brief-point"><span class="brief-no">'+String(i+1).padStart(2,'0')+'</span><div>'+
+        '<b>'+esc(title)+'</b>'+(detail?'<p>'+esc(detail.slice(0,110))+'</p>':'')+'</div></div>';
+    }).join('');
+    return '<div class="section"><div class="section-head"><span class="bar"></span><h2>今日简报</h2>'+
+      '<span class="meta-r">按重点排序</span></div><div class="section-rule"></div><div class="card">'+rows+'</div></div>';
+  }
+
+  function hotCard(){
+    const sources=(DATA.hotlists&&DATA.hotlists.sources)||[];
+    if(!sources.length)return '';
+    const cols=sources.slice(0,4).map(s=>{
+      const items=(s.items||s.entries||s.list||[]).slice(0,6).map(it=>{
+        const t=typeof it==='string'?it:(it.title||it.name||'');
+        return t?'<div class="hot-item">'+esc(t)+'</div>':'';
+      }).join('');
+      return '<div class="hot-col"><h3>'+esc(s.name||s.title||'热榜')+'</h3>'+items+'</div>';
+    }).join('');
+    return '<div class="section"><div class="section-head"><span class="bar"></span><h2>全网热榜</h2></div>'+
+      '<div class="section-rule"></div><div class="card"><div class="hot-grid">'+cols+'</div></div></div>';
+  }
+
+  function categoryView(id){
+    const c=cats.find(x=>x.id===id)||{};
+    const color=catColor(id);
+    const rows=(c.items||[]).map(it=>
+      '<div class="entry"><h3>'+esc(it.title)+'</h3>'+
+      '<div class="src">'+esc(it.source||'')+(it.time?' · '+esc(it.time):'')+'</div>'+
+      (it.summary?'<p>'+esc(it.summary)+'</p>':'')+
+      (it.url?'<a class="open" href="'+esc(it.url)+'" target="_blank" rel="noopener">阅读原文 ↗</a>':'')+'</div>').join('');
+    return '<button class="back" data-action="overview">‹ 返回今日速览</button>'+
+      '<div class="section" style="margin-top:0"><div class="section-head"><span class="bar" style="background:'+color+'"></span>'+
+      '<h2>'+esc(c.name||'')+'</h2><span class="meta-r">'+esc(groupOf(id))+' · 今日 '+(c.items||[]).length+' 条</span></div>'+
+      '<div class="section-rule"></div><div class="card">'+(rows||'<div class="empty">今天这个栏目还没有新条目</div>')+'</div></div>';
+  }
+
+  function searchView(){
+    const q=state.query.trim().toLowerCase();
+    const hits=[];
+    cats.forEach(c=>(c.items||[]).forEach(it=>{
+      const hay=(it.title+' '+(it.summary||'')+' '+(it.source||'')).toLowerCase();
+      if(!q||hay.indexOf(q)>=0)hits.push({cat:c,item:it});
+    }));
+    const rows=hits.slice(0,60).map(h=>
+      '<div class="entry"><h3>'+esc(h.item.title)+'</h3><div class="src">'+esc(h.cat.name)+' · '+esc(h.item.source||'')+'</div>'+
+      (h.item.summary?'<p>'+esc(h.item.summary.slice(0,120))+'</p>':'')+
+      (h.item.url?'<a class="open" href="'+esc(h.item.url)+'" target="_blank" rel="noopener">阅读原文 ↗</a>':'')+'</div>').join('');
+    return '<button class="back" data-action="overview">‹ 返回今日速览</button>'+
+      '<div class="section" style="margin-top:0"><div class="section-head"><span class="bar"></span><h2>搜索结果</h2>'+
+      '<span class="meta-r">「'+esc(state.query)+'」· '+hits.length+' 条</span></div><div class="section-rule"></div>'+
+      '<div class="card">'+(rows||'<div class="empty">没有找到相关条目</div>')+'</div></div>';
+  }
+
+  function render(){
+    applyTheme();renderSidebar();
+    let html='';
+    if(state.query.trim())html=searchView();
+    else if(state.view==='category')html=categoryView(state.category);
+    else html=masthead()+radio()+tiles()+briefCard()+hotCard()+
+      '<div class="foot-note">行星日报 · Windows 离线版　|　数据来自本机日报快照，全中文、无在线翻译<br>'+
+      '想更新内容：把新的 latest.json 放进 data 文件夹，运行「Refresh.bat」，或直接从 Mac 重新导出整个文件夹</div>';
+    document.getElementById('content').innerHTML=html;
+    bindAudio();
+  }
+
+  function bindAudio(){
+    const bar=document.getElementById('radioBar'),btn=document.getElementById('playBtn');
+    if(!btn)return;
+    btn.textContent=audio.paused?'▶':'❚❚';
+    const sync=()=>{
+      if(bar&&audio.duration)bar.style.width=(audio.currentTime/audio.duration*100)+'%';
+      const title=document.getElementById('radioTitle');
+      if(title&&CHAPTERS.length){
+        let cur=CHAPTERS[0];
+        CHAPTERS.forEach(c=>{if(audio.currentTime>=c.start)cur=c});
+        if(audio.paused&&audio.currentTime===0)title.textContent='今日播报 · 共 '+CHAPTERS.length+' 章';
+        else title.textContent=(audio.paused?'已暂停 · ':'正在播 · ')+cur.title;
+      }
+      document.querySelectorAll('.chapter').forEach((el,i)=>{
+        el.classList.toggle('on',CHAPTERS.length&&CHAPTERS[i]&&audio.currentTime>=CHAPTERS[i].start&&
+          (!CHAPTERS[i+1]||audio.currentTime<CHAPTERS[i+1].start));
+      });
+    };
+    audio.ontimeupdate=sync;audio.onended=sync;audio.onplay=()=>{btn.textContent='❚❚'};
+    audio.onpause=()=>{btn.textContent='▶'};sync();
+  }
+
+  function speak(){
+    const text=(DATA.brief&&DATA.brief.audio_script)||(DATA.brief&&DATA.brief.summary)||'';
+    if(!('speechSynthesis' in window)){alert('当前浏览器不支持语音朗读，请使用 Edge 或 Chrome。');return}
+    if(speechSynthesis.speaking){speechSynthesis.cancel();return}
+    const u=new SpeechSynthesisUtterance(text.slice(0,6000));
+    u.lang='zh-CN';u.rate=1.05;u.pitch=1;
+    speechSynthesis.speak(u);
+  }
+
+  document.addEventListener('click',function(e){
+    const el=e.target.closest('[data-action]');if(!el)return;
+    const act=el.getAttribute('data-action');
+    if(act==='overview'){state.view='overview';state.category=null;state.query='';render()}
+    else if(act==='category'){state.view='category';state.category=el.getAttribute('data-id');state.query='';render();document.querySelector('.main').scrollTop=0}
+    else if(act==='expand'){state.expanded=!state.expanded;render()}
+    else if(act==='skinNext'){
+      const keys=Object.keys(SKINS),i=(keys.indexOf(state.skin)+1)%keys.length;
+      state.skin=keys[i];localStorage.setItem('pd-skin',state.skin);render();
+    }
+    else if(act==='play'){
+      if(!audio.getAttribute('src')||audio.getAttribute('src')==='__NONE__'){speak();return}
+      if(audio.paused)audio.play().catch(()=>speak());else audio.pause();
+    }
+    else if(act==='speak'){speak()}
+    else if(act==='chapter'){
+      const t=Number(el.getAttribute('data-start')||0);
+      if(audio.getAttribute('src')&&audio.getAttribute('src')!=='__NONE__'){audio.currentTime=t;audio.play().catch(()=>{})}
+      else speak();
+    }
+  });
+  document.addEventListener('input',function(e){
+    if(e.target.id==='searchInput'){
+      state.query=e.target.value;
+      const pos=e.target.selectionStart;render();
+      const input=document.getElementById('searchInput');
+      if(input){input.focus();try{input.setSelectionRange(pos,pos)}catch(_){}}
+    }
+  });
+  document.addEventListener('change',function(e){
+    if(e.target.id==='skinSelect'){state.skin=e.target.value;localStorage.setItem('pd-skin',state.skin);render()}
+  });
+  document.getElementById('modeBtn').addEventListener('click',function(){
+    state.mode=state.mode==='system'?'light':(state.mode==='light'?'dark':'system');
+    localStorage.setItem('pd-mode',state.mode);render();
+  });
+  if(window.matchMedia)window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if(state.mode==='system')render()});
+  render();
+})();
+</script>
+</body>
+</html>

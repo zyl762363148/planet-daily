@@ -1,0 +1,2 @@
+# Optional online natural speech runtime; installed only into .venv-tts.
+edge-tts==7.3.1

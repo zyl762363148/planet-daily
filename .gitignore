@@ -1,0 +1,43 @@
+# Python / 虚拟环境
+__pycache__/
+*.py[cod]
+.venv-tts/
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# macOS
+.DS_Store
+.AppleDouble
+
+# 构建产物（.app / 编译输出，需发布时走 GitHub Releases）
+build/
+*.app/
+dist/
+
+# 本机运行数据 / 每日生成内容（含抓取的简报、邮件 HTML、语音稿）
+reports/
+windows/data/
+windows/audio/
+backend/.tmp_broadcast.json
+backend/.tmp_*.json
+*.mp3
+*.wav
+*.m4a
+# 例外：App 内置的语音试听样本是产品资源，需随源码分发
+!app/Resources/VoicePreviews/*.mp3
+
+# 私人凭据（真实配置在 ~/.config/dailydigest/email.json，不随仓库分发）
+email.json
+.env
+*.env
+credentials*
+*_secret*
+
+# 临时 / 备份文件
+*.bak
+*.bak-*
+*.orig
+*~
+*.swp
