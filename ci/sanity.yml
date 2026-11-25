@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  sanity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Compile Python sources
+        run: python -m compileall -q backend
+      - name: Validate JSON fixtures
+        run: |
+          python - <<'PY'
+          import glob, json
+          files = glob.glob('backend/*.json')
+          for f in files:
+              with open(f, encoding='utf-8') as fh:
+                  json.load(fh)
+          print(f'{len(files)} JSON fixtures OK')
+          PY
+      - name: Shell syntax check
+        run: bash -n build.sh setup_tts.sh backend/run_generate.sh
