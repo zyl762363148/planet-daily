@@ -1,13 +1,57 @@
-# 行星日报
+# 行星日报 · Planet Daily
 
-一个本地 macOS 桌面应用：每天把各栏目的公开信息抓取下来，整理成 **一日简报 + 机会信号 + 今日热点 + 全网热榜 + 今日专题 + 干货 + 为什么值得看 + 解读**，支持按日期归档、一周回顾、每日语音播报和每日邮件推送。侧栏不再展示收藏入口，原有收藏数据保留。
+一个 **本地优先、可自托管** 的每日资讯简报：把公开信息抓取、整理成「一日简报 + 机会信号 + 今日热点 + 全网热榜 + 今日专题 + 干货 + 为什么值得看 + 解读」，按日期归档，支持一周回顾、每日语音播报和邮件推送。
 
-- 应用：`~/Applications/行星日报.app`（桌面也有快捷方式）
-- 源码：`~/Developer/DailyDigest`
-- 数据：`~/Library/Application Support/DailyDigest/data/`（自动按保留策略清理，见下文）
-- 滚动更新：`09:00` 全量 + `12/16/20` 增量，LaunchAgent `com.c.dailydigest.generate`
-- 语音播报：每天 `09:10`，LaunchAgent `com.c.dailydigest.speak`
-- 邮件推送：每天 `09:30`，LaunchAgent `com.c.dailydigest.email`
+抓取、归档与阅读都发生在你自己的机器上，不提供托管服务，也不需要账号。
+
+## 它能做什么
+
+- 9 个栏目、20 余个公开数据源适配（中文报道优先，含政府/部委列表页与公开热榜接口）
+- 每日 09:00 全量生成，12/16/20 点增量滚动更新
+- SwiftUI macOS 客户端（`app/`），支持收藏、按日期回看与一周回顾
+- 语音播报（edge-tts）与每日邮件推送，均可独立开关
+- `tests/` 下带生成质量、中文门禁、热榜与回归测试
+- 全链路本地降级：某个数据源或 AI 不可用时用本地规则继续出报，不留空页
+
+## 快速开始
+
+```bash
+git clone https://github.com/zyl762363148/planet-daily.git
+cd planet-daily
+python3 -m pip install -r requirements-tts.txt   # 可选：语音播报依赖
+python3 backend/generate.py                       # 生成当日日报
+bash build.sh                                     # 构建 macOS App（需 Xcode / Swift）
+```
+
+- 邮件推送：复制 `backend/email.example.json` 为本地配置后填写 SMTP 信息，**不要提交配置文件**。
+- 定时任务：`setup_schedule.command` 安装 LaunchAgent，`setup_tts.sh` 配置语音环境；路径与时间可按本机情况调整。
+- 更完整的构建、配置与排障说明见 [PRODUCT.md](PRODUCT.md)、[DESIGN.md](DESIGN.md) 及下文各章节。
+
+## 目录结构
+
+| 路径 | 说明 |
+| --- | --- |
+| `backend/` | 抓取、生成、去重、简报、热榜、邮件与语音脚本 |
+| `app/` | SwiftUI macOS 客户端与图标资源 |
+| `build.sh` | App 构建脚本 |
+| `setup_schedule.command` / `setup_tts.sh` | 定时任务与语音环境配置 |
+| `tests/` | 回归与质量测试 |
+
+## 配置与数据
+
+macOS 默认数据目录为 `~/Library/Application Support/DailyDigest/`，可在脚本与配置中调整。保留策略、天气城市、栏目开关等见下文「存储保留策略」与「一周」章节。
+
+## 边界与免责
+
+只聚合公开来源，不调用在线模型翻译外媒；政策内容仅为信息梳理，不构成官方解读，经济与健康内容不构成投资或医疗建议。请遵守各来源站点的服务条款与抓取频率限制。
+
+## 参与
+
+欢迎提 issue 与 PR，见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+
+## License
+
+MIT，见 [LICENSE](LICENSE)。
 
 ## 栏目
 
